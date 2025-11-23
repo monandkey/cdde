@@ -7,3 +7,10 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+cdde-core = { path = "../cdde-core" }
+cdde-proto = { path = "../cdde-proto" }
+cdde-logging = { path = "../cdde-logging" }
+cdde-metrics = { path = "../cdde-metrics" }
+tokio.workspace = true
+tracing.workspace = true
+serde.workspace = true
