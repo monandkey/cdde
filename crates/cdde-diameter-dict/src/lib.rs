@@ -1,14 +1,9 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+// Diameter dictionary module
+pub mod standard;
+pub mod data_type;
+pub mod manager;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+// Re-export commonly used types
+pub use standard::StandardAvpCode;
+pub use data_type::{AvpDataType, AvpValue, ParseError};
+pub use manager::{DictionaryManager, AvpInfo};
