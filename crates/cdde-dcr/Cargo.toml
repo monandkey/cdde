@@ -15,3 +15,8 @@ cdde-metrics = { path = "../cdde-metrics" }
 tokio.workspace = true
 tracing.workspace = true
 serde.workspace = true
+tonic.workspace = true
+prost.workspace = true
+
+[build-dependencies]
+tonic-build.workspace = true
