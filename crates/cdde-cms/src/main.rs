@@ -1,4 +1,5 @@
 mod repository;
+mod api;
 
 pub use repository::{ConfigRepository, VirtualRouter, PeerConfig};
 
@@ -20,10 +21,16 @@ async fn main() {
         "Starting Config & Management Service"
     );
 
-    // TODO: Initialize database connection
-    // TODO: Implement REST API endpoints
-    // TODO: Implement gRPC service
-    // TODO: Start HTTP server
+    // Initialize repository
+    let repository = ConfigRepository::new();
     
-    info!("CMS service initialized");
+    // Create API router
+    let app = api::create_router(repository);
+
+    // Start HTTP server
+    let addr = "0.0.0.0:3000";
+    info!("Listening on {}", addr);
+    
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }

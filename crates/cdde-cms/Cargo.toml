@@ -15,4 +15,10 @@ cdde-metrics = { path = "../cdde-metrics" }
 tokio.workspace = true
 tracing.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 axum.workspace = true
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+hyper = "1.0"
+mime = "0.3"

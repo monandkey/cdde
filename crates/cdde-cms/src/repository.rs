@@ -19,6 +19,7 @@ pub struct PeerConfig {
 }
 
 /// Configuration repository (in-memory for now)
+#[derive(Clone)]
 pub struct ConfigRepository {
     virtual_routers: std::sync::Arc<tokio::sync::RwLock<Vec<VirtualRouter>>>,
     peers: std::sync::Arc<tokio::sync::RwLock<Vec<PeerConfig>>>,
