@@ -4,6 +4,14 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-repository.workspace = true
 
 [dependencies]
+cdde-core = { path = "../cdde-core" }
+cdde-proto = { path = "../cdde-proto" }
+cdde-diameter-dict = { path = "../cdde-diameter-dict" }
+cdde-dsl-engine = { path = "../cdde-dsl-engine" }
+cdde-logging = { path = "../cdde-logging" }
+cdde-metrics = { path = "../cdde-metrics" }
+tokio.workspace = true
+tracing.workspace = true
+serde.workspace = true
