@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package cdde.internal;
+
+// ========================================
+// Core Router Service
+// ========================================
+// Service for communication between DFL and DCR
+service CoreRouterService {
+    // Bidirectional streaming for efficient packet pipeline processing
+    rpc ProcessStream (stream DiameterPacketRequest) returns (stream DiameterPacketAction);
+}
+
+// ========================================
+// DFL to DCR Request Message
+// ========================================
+message DiameterPacketRequest {
+    // Unique ID for SCTP connection within DFL
+    uint64 connection_id = 1;
+    
+    // Virtual Router ID determined by DFL from received IP
+    string vr_id = 2;
+    
+    // Reception timestamp at DFL (nanoseconds)
+    uint64 reception_timestamp = 3;
+    
+    // Raw Diameter packet (binary data)
+    bytes raw_payload = 4;
+    
+    // Session tracking ID assigned by DFL
+    uint64 session_tx_id = 5;
+}
+
+// ========================================
+// DCR to DFL Action Message
+// ========================================
+message DiameterPacketAction {
+    // Action type enum
+    enum ActionType {
+        FORWARD = 0;  // Forward to next hop
+        REPLY = 1;    // Send immediate response
+        DISCARD = 2;  // Discard packet
+    }
+    
+    // Action to perform
+    ActionType action_type = 1;
+    
+    // Target host name for FORWARD action (DFL uses this to lookup Peer Table)
+    string target_host_name = 2;
+    
+    // Final Diameter packet to send (after manipulation)
+    bytes response_payload = 3;
+    
+    // Original connection ID for REPLY action
+    uint64 original_connection_id = 4;
+}
+
+// ========================================
+// Routing Update Service (DPA to DFL)
+// ========================================
+service RoutingUpdateService {
+    // Notify DFL of peer status changes
+    rpc UpdatePeerStatus (PeerStatusRequest) returns (UpdateResponse);
+}
+
+message PeerStatusRequest {
+    // Peer node identifier
+    string peer_node_id = 1;
+    
+    // Peer status
+    enum Status {
+        UP = 0;
+        DOWN = 1;
+    }
+    Status current_status = 2;
+    
+    // Affected Virtual Router IDs
+    repeated string virtual_router_ids = 3;
+}
+
+message UpdateResponse {
+    bool success = 1;
+    string message = 2;
+}
