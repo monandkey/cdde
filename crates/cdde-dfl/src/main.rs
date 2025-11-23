@@ -1,8 +1,10 @@
 mod session;
 mod store;
+mod client;
 
 pub use session::TransactionContext;
 pub use store::TransactionStore;
+pub use client::DcrClient;
 
 use cdde_logging;
 use cdde_metrics;
@@ -22,8 +24,16 @@ async fn main() {
         "Starting Diameter Frontline service"
     );
 
+    // Initialize DCR client
+    let dcr_endpoint = std::env::var("DCR_ENDPOINT").unwrap_or_else(|_| "http://[::1]:50051".to_string());
+    let _dcr_client = DcrClient::new(dcr_endpoint.clone());
+    
+    info!("Initialized DCR client pointing to {}", dcr_endpoint);
+
+    // Initialize Session Store
+    let _store = TransactionStore::new();
+
     // TODO: Implement SCTP listener
-    // TODO: Implement gRPC client to DCR
     // TODO: Implement main event loop
     
     info!("DFL service initialized");
