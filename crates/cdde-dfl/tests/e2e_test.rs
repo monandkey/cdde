@@ -48,7 +48,7 @@ async fn test_e2e_flow() {
 
     // 2. Verify DCR connection
     let mut client = cdde_proto::core_router_service_client::CoreRouterServiceClient::connect(
-        format!("http://{}", dcr_addr),
+        format!("http://{dcr_addr}"),
     )
     .await
     .expect("Failed to connect to Mock DCR");

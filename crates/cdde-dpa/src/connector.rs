@@ -216,8 +216,7 @@ impl TcpClient {
                 if code != 2001 {
                     // DIAMETER_SUCCESS
                     return Err(CddeError::InvalidPacket(format!(
-                        "Handshake failed with Result-Code: {}",
-                        code
+                        "Handshake failed with Result-Code: {code}"
                     )));
                 }
             }
