@@ -6,6 +6,10 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[lib]
+name = "cdde_cms"
+path = "src/lib.rs"
+
 [dependencies]
 cdde-core = { path = "../cdde-core" }
 cdde-proto = { path = "../cdde-proto" }

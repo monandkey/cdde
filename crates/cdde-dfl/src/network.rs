@@ -75,7 +75,8 @@ impl TcpServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::io::{AsyncWriteExt, ReadBuf};
+    use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+    use async_trait::async_trait;
     use std::pin::Pin;
     use std::task::{Context, Poll};
     use std::net::{SocketAddr, IpAddr, Ipv4Addr};

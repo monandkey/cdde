@@ -94,6 +94,10 @@ jsonwebtoken = "9.2"
 opentelemetry = "0.21"
 opentelemetry-jaeger = "0.20"
 
+# Testing
+tokio-test = "0.4"
+mockall = "0.12"
+
 [profile.release]
 opt-level = 3
 lto = true
