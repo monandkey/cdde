@@ -30,11 +30,13 @@ repository = "https://github.com/monandkey/cdde"
 # Async runtime
 tokio = { version = "1.35", features = ["full"] }
 tokio-util = { version = "0.7", features = ["time"] }
+tokio-stream = "0.1"
 
 # gRPC and Protocol Buffers
 tonic = "0.11"
 prost = "0.12"
 tonic-build = "0.11"
+async-trait = "0.1"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -55,7 +57,7 @@ prometheus = { version = "0.13", features = ["process"] }
 lazy_static = "1.4"
 
 # Database (for CMS)
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "migrate"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "migrate", "chrono"] }
 
 # HTTP server (for CMS)
 axum = "0.7"

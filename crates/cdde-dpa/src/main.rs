@@ -1,6 +1,8 @@
 mod state_machine;
+mod connector;
 
-pub use state_machine::{PeerStateMachine, PeerState};
+pub use state_machine::PeerStateMachine;
+pub use connector::TcpClient;
 
 use cdde_logging;
 use cdde_metrics;
@@ -20,10 +22,20 @@ async fn main() {
         "Starting Diameter Peer Agent service"
     );
 
-    // TODO: Load peer configuration
-    // TODO: Implement alive monitoring (DWR/DWA)
-    // TODO: Implement SCTP heartbeat monitoring
-    // TODO: Implement peer status notification to DFL
+    // Initialize State Machine
+    let peer_addr = std::env::var("PEER_ADDR").unwrap_or_else(|_| "127.0.0.1:3868".to_string());
+    let _fsm = PeerStateMachine::new(peer_addr.clone());
+
+    // Start Connector
+    let client = TcpClient::new(peer_addr);
     
-    info!("DPA service initialized");
+    // Spawn client loop
+    tokio::spawn(async move {
+        client.start().await;
+    });
+
+    // Keep main alive
+    loop {
+        tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+    }
 }

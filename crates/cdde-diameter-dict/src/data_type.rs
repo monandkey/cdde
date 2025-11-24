@@ -17,6 +17,7 @@ pub enum AvpDataType {
     Enumerated,
     Time,
     Address,
+    IpFilterRule,
 }
 
 /// AVP value after parsing
@@ -36,6 +37,7 @@ pub enum AvpValue {
     Enumerated(i32),
     Time(u32),
     Address(Vec<u8>),
+    IpFilterRule(Vec<u8>),
 }
 
 /// Parse errors
@@ -138,6 +140,8 @@ impl AvpDataType {
             }
             
             Self::Address => Ok(AvpValue::Address(data.to_vec())),
+            
+            Self::IpFilterRule => Ok(AvpValue::IpFilterRule(data.to_vec())),
         }
     }
 }

@@ -1,14 +1,18 @@
 mod session;
 mod store;
 mod client;
+mod network;
+mod integration_test;
 
 pub use session::TransactionContext;
 pub use store::TransactionStore;
 pub use client::DcrClient;
+pub use network::TcpServer;
 
 use cdde_logging;
 use cdde_metrics;
 use tracing::info;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
@@ -31,10 +35,15 @@ async fn main() {
     info!("Initialized DCR client pointing to {}", dcr_endpoint);
 
     // Initialize Session Store
-    let _store = TransactionStore::new();
+    let store = Arc::new(TransactionStore::new());
 
-    // TODO: Implement SCTP listener
-    // TODO: Implement main event loop
+    // Start TCP Server
+    let bind_addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3868".to_string());
+    let server = TcpServer::new(bind_addr.clone(), store);
+
+    info!("Starting TCP listener on {}", bind_addr);
     
-    info!("DFL service initialized");
+    if let Err(e) = server.start().await {
+        info!("Server error: {}", e);
+    }
 }

@@ -13,4 +13,5 @@ cdde-logging = { path = "../cdde-logging" }
 cdde-metrics = { path = "../cdde-metrics" }
 tokio.workspace = true
 tracing.workspace = true
+async-trait.workspace = true
 serde.workspace = true

@@ -1,4 +1,5 @@
 use dashmap::DashMap;
+use tokio_stream::StreamExt;
 use std::sync::Arc;
 use tokio_util::time::{DelayQueue, delay_queue::Key};
 use std::time::Duration;
@@ -88,7 +89,7 @@ impl TransactionStore {
 
     /// Wait for next timeout
     pub async fn next_timeout(&self) -> Option<(u64, u32)> {
-        use futures::StreamExt;
+
         let mut delay_queue = self.delay_queue.lock().await;
         delay_queue.next().await.map(|expired| expired.into_inner())
     }

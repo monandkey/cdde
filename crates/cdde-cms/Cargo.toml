@@ -12,11 +12,16 @@ cdde-proto = { path = "../cdde-proto" }
 cdde-config = { path = "../cdde-config" }
 cdde-logging = { path = "../cdde-logging" }
 cdde-metrics = { path = "../cdde-metrics" }
+cdde-diameter-dict = { path = "../cdde-diameter-dict" }
 tokio.workspace = true
 tracing.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 axum.workspace = true
+sqlx.workspace = true
+anyhow.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
+
 
 [dev-dependencies]
 tower = { version = "0.5", features = ["util"] }

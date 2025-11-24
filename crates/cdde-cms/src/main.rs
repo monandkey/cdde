@@ -1,11 +1,16 @@
 mod repository;
 mod api;
+mod models;
 
-pub use repository::{ConfigRepository, VirtualRouter, PeerConfig};
+mod db;
+
+pub use repository::{VirtualRouter, PeerConfig};
+pub use models::{Dictionary, DictionaryAvp, RoutingRule, ManipulationRule};
+pub use db::PostgresRepository;
 
 use cdde_logging;
 use cdde_metrics;
-use tracing::info;
+use tracing::{info, error};
 
 #[tokio::main]
 async fn main() {
@@ -22,10 +27,20 @@ async fn main() {
     );
 
     // Initialize repository
-    let repository = ConfigRepository::new();
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let repository = match PostgresRepository::new(&database_url).await {
+        Ok(repo) => repo,
+        Err(e) => {
+            error!("Failed to connect to database: {}", e);
+            return;
+        }
+    };
     
+    // Initialize dictionary manager
+    let dictionary_manager = std::sync::Arc::new(cdde_diameter_dict::DictionaryManager::new());
+
     // Create API router
-    let app = api::create_router(repository);
+    let app = api::create_router(repository, dictionary_manager);
 
     // Start HTTP server
     let addr = "0.0.0.0:3000";

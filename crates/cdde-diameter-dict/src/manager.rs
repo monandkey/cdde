@@ -10,15 +10,40 @@ pub struct AvpInfo {
     pub vendor_id: Option<u32>,
 }
 
+use std::collections::HashMap;
+use std::sync::RwLock;
+use serde::Deserialize;
+use quick_xml::de::from_str;
+
 /// Dictionary manager for AVP lookup and parsing
 pub struct DictionaryManager {
-    // Future: Add dynamic dictionary support
+    dynamic_avps: RwLock<HashMap<u32, AvpInfo>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DictionaryXml {
+    #[serde(rename = "avp", default)]
+    avps: Vec<AvpXml>,
+}
+
+#[derive(Debug, Deserialize)]
+struct AvpXml {
+    #[serde(rename = "@name")]
+    name: String,
+    #[serde(rename = "@code")]
+    code: u32,
+    #[serde(rename = "@type")]
+    data_type: String,
+    #[serde(rename = "@vendor-id")]
+    vendor_id: Option<u32>,
 }
 
 impl DictionaryManager {
     /// Create new dictionary manager
     pub fn new() -> Self {
-        Self {}
+        Self {
+            dynamic_avps: RwLock::new(HashMap::new()),
+        }
     }
 
     /// Lookup AVP information by code
@@ -33,7 +58,13 @@ impl DictionaryManager {
             });
         }
 
-        // TODO: Add dynamic dictionary lookup
+        // Try dynamic dictionary
+        if let Ok(guard) = self.dynamic_avps.read() {
+            if let Some(info) = guard.get(&code) {
+                return Some(info.clone());
+            }
+        }
+
         None
     }
 
@@ -43,6 +74,45 @@ impl DictionaryManager {
             .ok_or(ParseError::UnknownAvpCode(code))?;
         
         info.data_type.parse(data)
+    }
+
+    /// Load dynamic dictionary from XML string
+    pub fn load_dynamic_dictionary(&self, xml: &str) -> Result<(), String> {
+        let dict: DictionaryXml = from_str(xml).map_err(|e| e.to_string())?;
+        
+        let mut guard = self.dynamic_avps.write().map_err(|_| "Lock poisoned".to_string())?;
+        
+        for avp in dict.avps {
+            let data_type = match avp.data_type.as_str() {
+                "OctetString" => AvpDataType::OctetString,
+                "Integer32" => AvpDataType::Integer32,
+                "Integer64" => AvpDataType::Integer64,
+                "Unsigned32" => AvpDataType::Unsigned32,
+                "Unsigned64" => AvpDataType::Unsigned64,
+                "Float32" => AvpDataType::Float32,
+                "Float64" => AvpDataType::Float64,
+                "Grouped" => AvpDataType::Grouped,
+                "Address" => AvpDataType::Address,
+                "Time" => AvpDataType::Time,
+                "UTF8String" => AvpDataType::Utf8String,
+                "DiameterIdentity" => AvpDataType::DiameterIdentity,
+                "DiameterURI" => AvpDataType::DiameterUri,
+                "Enumerated" => AvpDataType::Enumerated,
+                "IPFilterRule" => AvpDataType::IpFilterRule,
+                _ => continue, // Skip unknown types or handle error
+            };
+
+            let info = AvpInfo {
+                code: avp.code,
+                name: avp.name,
+                data_type,
+                vendor_id: avp.vendor_id,
+            };
+            
+            guard.insert(avp.code, info);
+        }
+        
+        Ok(())
     }
 }
 
@@ -94,5 +164,22 @@ mod tests {
         let result = manager.parse_avp(99999, &data);
         
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_dynamic_dictionary() {
+        let manager = DictionaryManager::new();
+        let xml = r#"
+        <dictionary>
+            <avp name="Test-AVP" code="10001" type="Unsigned32" vendor-id="9999"/>
+        </dictionary>
+        "#;
+        
+        manager.load_dynamic_dictionary(xml).expect("Failed to load dictionary");
+        
+        let info = manager.lookup(10001).unwrap();
+        assert_eq!(info.name, "Test-AVP");
+        assert_eq!(info.data_type, AvpDataType::Unsigned32);
+        assert_eq!(info.vendor_id, Some(9999));
     }
 }
