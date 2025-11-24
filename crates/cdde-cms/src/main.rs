@@ -4,10 +4,11 @@ mod models;
 mod db;
 mod error;
 
-pub use models::{Dictionary, DictionaryAvp, RoutingRule, ManipulationRule, VirtualRouter, PeerConfig};
 pub use db::PostgresRepository;
 pub use error::AppError;
-
+pub use models::{
+    Dictionary, DictionaryAvp, ManipulationRule, PeerConfig, RoutingRule, VirtualRouter,
+};
 
 use tracing::{error, info};
 
@@ -42,12 +43,12 @@ async fn main() {
 
     // Create API router
     let api_router = api::create_router(repository, dictionary_manager);
-    
+
     // Swagger UI
+    use api::ApiDoc;
     use utoipa::OpenApi;
     use utoipa_swagger_ui::SwaggerUi;
-    use api::ApiDoc;
-    
+
     let app = Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .merge(api_router);

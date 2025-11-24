@@ -46,7 +46,9 @@ where
         .try_deserialize()
         .map_err(|e| ConfigError::LoadError(e.to_string()))?;
 
-    config.validate().map_err(|e| ConfigError::ValidationError(e.to_string()))?;
+    config
+        .validate()
+        .map_err(|e| ConfigError::ValidationError(e.to_string()))?;
     Ok(config)
 }
 
@@ -55,8 +57,11 @@ pub fn load_from_yaml<T>(yaml: &str) -> Result<T, ConfigError>
 where
     T: for<'de> Deserialize<'de> + Validate,
 {
-    let config: T = serde_yaml::from_str(yaml).map_err(|e| ConfigError::LoadError(e.to_string()))?;
-    config.validate().map_err(|e| ConfigError::ValidationError(e.to_string()))?;
+    let config: T =
+        serde_yaml::from_str(yaml).map_err(|e| ConfigError::LoadError(e.to_string()))?;
+    config
+        .validate()
+        .map_err(|e| ConfigError::ValidationError(e.to_string()))?;
     Ok(config)
 }
 

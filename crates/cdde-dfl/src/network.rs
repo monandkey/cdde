@@ -51,7 +51,15 @@ impl TcpServer {
     ) -> Result<()> {
         // Connect to DCR
         // In real impl, this address should be configurable
-        let mut dcr_client: Option<cdde_proto::core_router_service_client::CoreRouterServiceClient<tonic::transport::Channel>> = match cdde_proto::core_router_service_client::CoreRouterServiceClient::connect("http://[::1]:50051").await {
+        let mut dcr_client: Option<
+            cdde_proto::core_router_service_client::CoreRouterServiceClient<
+                tonic::transport::Channel,
+            >,
+        > = match cdde_proto::core_router_service_client::CoreRouterServiceClient::connect(
+            "http://[::1]:50051",
+        )
+        .await
+        {
             Ok(client) => Some(client),
             Err(e) => {
                 error!("Failed to connect to DCR: {}", e);
@@ -75,10 +83,10 @@ impl TcpServer {
             match DiameterPacket::parse(&buffer[..n]) {
                 Ok(packet) => {
                     debug!("Parsed packet: Command Code {}", packet.header.command_code);
-                    
+
                     if let Some(client) = &mut dcr_client {
                         let request = tonic::Request::new(cdde_proto::DiameterPacketRequest {
-                            connection_id: 0, // Placeholder
+                            connection_id: 0,             // Placeholder
                             vr_id: "default".to_string(), // Placeholder
                             reception_timestamp: std::time::SystemTime::now()
                                 .duration_since(std::time::UNIX_EPOCH)
@@ -87,28 +95,37 @@ impl TcpServer {
                             raw_payload: packet.serialize(),
                             session_tx_id: 0, // Placeholder
                         });
-                        
+
                         match client.process_packet(request).await {
                             Ok(response) => {
                                 let action = response.into_inner();
-                                let action_type = cdde_proto::ActionType::try_from(action.action_type)
-                                    .unwrap_or(cdde_proto::ActionType::Discard);
-                                    
+                                let action_type =
+                                    cdde_proto::ActionType::try_from(action.action_type)
+                                        .unwrap_or(cdde_proto::ActionType::Discard);
+
                                 info!("Received action from DCR: {:?}", action_type);
-                                
+
                                 match action_type {
                                     cdde_proto::ActionType::Reply => {
                                         if !action.response_payload.is_empty() {
-                                            debug!("Sending Reply to client, {} bytes", action.response_payload.len());
+                                            debug!(
+                                                "Sending Reply to client, {} bytes",
+                                                action.response_payload.len()
+                                            );
                                             use tokio::io::AsyncWriteExt;
-                                            if let Err(e) = socket.write_all(&action.response_payload).await {
+                                            if let Err(e) =
+                                                socket.write_all(&action.response_payload).await
+                                            {
                                                 error!("Failed to write response to socket: {}", e);
                                             }
                                         }
                                     }
                                     cdde_proto::ActionType::Forward => {
                                         if !action.target_host_name.is_empty() {
-                                            info!("Forwarding packet to target: {}", action.target_host_name);
+                                            info!(
+                                                "Forwarding packet to target: {}",
+                                                action.target_host_name
+                                            );
                                             // TODO: Implement actual forwarding via DPA or direct connection
                                         } else {
                                             warn!("Forward action received but no target host specified");

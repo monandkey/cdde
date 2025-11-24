@@ -1,6 +1,8 @@
 use crate::db::PostgresRepository;
-use crate::models::{PeerConfig, VirtualRouter, Dictionary, RoutingRule, ManipulationRule, DictionaryAvp};
 use crate::error::AppError;
+use crate::models::{
+    Dictionary, DictionaryAvp, ManipulationRule, PeerConfig, RoutingRule, VirtualRouter,
+};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -10,8 +12,8 @@ use axum::{
 };
 use std::sync::Arc;
 use tracing::error;
-use validator::Validate;
 use utoipa::OpenApi;
+use validator::Validate;
 
 use cdde_diameter_dict::DictionaryManager;
 
@@ -116,7 +118,9 @@ pub fn create_router(
         (status = 200, description = "List all Virtual Routers", body = Vec<VirtualRouter>)
     )
 )]
-async fn list_vrs(State(state): State<Arc<AppState>>) -> Result<Json<Vec<VirtualRouter>>, AppError> {
+async fn list_vrs(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Vec<VirtualRouter>>, AppError> {
     let vrs = state.repository.get_all_vrs().await;
     Ok(Json(vrs))
 }
@@ -150,7 +154,10 @@ async fn create_vr(
         (status = 404, description = "Virtual Router not found")
     )
 )]
-async fn get_vr(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Result<Json<VirtualRouter>, AppError> {
+async fn get_vr(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<VirtualRouter>, AppError> {
     match state.repository.get_vr(&id).await {
         Some(vr) => Ok(Json(vr)),
         None => Err(AppError::NotFound),
@@ -287,7 +294,9 @@ async fn delete_peer(
         (status = 200, description = "List all Dictionaries", body = Vec<Dictionary>)
     )
 )]
-async fn list_dictionaries(State(state): State<Arc<AppState>>) -> Result<Json<Vec<Dictionary>>, AppError> {
+async fn list_dictionaries(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Vec<Dictionary>>, AppError> {
     let dictionaries = state.repository.list_dictionaries().await;
     Ok(Json(dictionaries))
 }
@@ -323,7 +332,10 @@ async fn get_dictionary(
         (status = 500, description = "Internal server error")
     )
 )]
-async fn upload_dictionary(State(state): State<Arc<AppState>>, body: String) -> Result<impl IntoResponse, AppError> {
+async fn upload_dictionary(
+    State(state): State<Arc<AppState>>,
+    body: String,
+) -> Result<impl IntoResponse, AppError> {
     // Parse XML to extract name and version
     // For now, use simple defaults
     let name = format!("dictionary_{}", chrono::Utc::now().timestamp());
@@ -334,9 +346,7 @@ async fn upload_dictionary(State(state): State<Arc<AppState>>, body: String) -> 
         Ok(_) => {
             // Save to database
             match state.repository.save_dictionary(name, version, body).await {
-                Some(id) => {
-                    Ok((StatusCode::CREATED, Json(serde_json::json!({"id": id}))))
-                }
+                Some(id) => Ok((StatusCode::CREATED, Json(serde_json::json!({"id": id})))),
                 None => Err(AppError::Internal("Failed to save dictionary".to_string())),
             }
         }
@@ -433,7 +443,9 @@ async fn create_routing_rule(
 
     match state.repository.create_routing_rule(payload).await {
         Some(id) => Ok((StatusCode::CREATED, Json(serde_json::json!({"id": id})))),
-        None => Err(AppError::Internal("Failed to create routing rule".to_string())),
+        None => Err(AppError::Internal(
+            "Failed to create routing rule".to_string(),
+        )),
     }
 }
 
@@ -550,7 +562,9 @@ async fn create_manipulation_rule(
 
     match state.repository.create_manipulation_rule(payload).await {
         Some(id) => Ok((StatusCode::CREATED, Json(serde_json::json!({"id": id})))),
-        None => Err(AppError::Internal("Failed to create manipulation rule".to_string())),
+        None => Err(AppError::Internal(
+            "Failed to create manipulation rule".to_string(),
+        )),
     }
 }
 

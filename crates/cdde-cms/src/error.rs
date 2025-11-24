@@ -20,7 +20,7 @@ pub enum AppError {
 
     #[error("Internal server error: {0}")]
     Internal(String),
-    
+
     #[error("Bad request: {0}")]
     BadRequest(String),
 }
@@ -30,13 +30,19 @@ impl IntoResponse for AppError {
         let (status, message) = match self {
             AppError::Database(e) => {
                 tracing::error!("Database error: {}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal server error".to_string(),
+                )
             }
             AppError::Validation(e) => (StatusCode::BAD_REQUEST, e.to_string()),
             AppError::NotFound => (StatusCode::NOT_FOUND, "Resource not found".to_string()),
             AppError::Internal(e) => {
                 tracing::error!("Internal error: {}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal server error".to_string(),
+                )
             }
             AppError::BadRequest(e) => (StatusCode::BAD_REQUEST, e),
         };

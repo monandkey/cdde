@@ -48,7 +48,9 @@ impl DiameterHeader {
 
         let version = data[0];
         if version != 1 {
-            return Err(CddeError::InvalidPacket(format!("Invalid version: {version}")));
+            return Err(CddeError::InvalidPacket(format!(
+                "Invalid version: {version}"
+            )));
         }
 
         let length = u32::from_be_bytes([data[1], data[2], data[3], 0]) >> 8;

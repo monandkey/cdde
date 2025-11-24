@@ -72,7 +72,10 @@ impl TcpClient {
                         info!("Received DWR from {}", self.peer_addr);
                         self.send_dwa(socket, &packet).await?;
                     } else {
-                        debug!("Received packet: Command Code {}", packet.header.command_code);
+                        debug!(
+                            "Received packet: Command Code {}",
+                            packet.header.command_code
+                        );
                         // TODO: Forward other requests to DFL/DCR
                     }
                 }
@@ -83,8 +86,12 @@ impl TcpClient {
         }
     }
 
-    async fn send_dwa<T: Transport>(&self, socket: &mut T, request: &cdde_core::DiameterPacket) -> Result<()> {
-        use cdde_core::{DiameterPacket, DiameterHeader, DiameterAvp};
+    async fn send_dwa<T: Transport>(
+        &self,
+        socket: &mut T,
+        request: &cdde_core::DiameterPacket,
+    ) -> Result<()> {
+        use cdde_core::{DiameterAvp, DiameterHeader, DiameterPacket};
         use tokio::io::AsyncWriteExt;
 
         let mut avps = Vec::new();
@@ -123,13 +130,13 @@ impl TcpClient {
         let packet = DiameterPacket { header, avps };
         let bytes = packet.serialize();
         socket.write_all(&bytes).await?;
-        
+
         info!("Sent DWA to {}", self.peer_addr);
         Ok(())
     }
 
     async fn send_cer<T: Transport>(&self, socket: &mut T) -> Result<()> {
-        use cdde_core::{DiameterPacket, DiameterHeader, DiameterAvp};
+        use cdde_core::{DiameterAvp, DiameterHeader, DiameterPacket};
         use tokio::io::AsyncWriteExt;
 
         let mut avps = Vec::new();
@@ -152,7 +159,7 @@ impl TcpClient {
             code: 257,
             flags: 0x40,
             vendor_id: None,
-            data: vec![0, 1, 127, 0, 0, 1], 
+            data: vec![0, 1, 127, 0, 0, 1],
         });
         // Vendor-Id (266)
         avps.push(DiameterAvp {
@@ -171,7 +178,7 @@ impl TcpClient {
 
         let header = DiameterHeader {
             version: 1,
-            length: 0, // Will be calculated
+            length: 0,   // Will be calculated
             flags: 0x80, // Request
             command_code: 257,
             application_id: 0,
@@ -182,34 +189,38 @@ impl TcpClient {
         let packet = DiameterPacket { header, avps };
         let bytes = packet.serialize();
         socket.write_all(&bytes).await?;
-        
+
         Ok(())
     }
 
     async fn receive_cea<T: Transport>(&self, socket: &mut T) -> Result<()> {
         use cdde_core::DiameterPacket;
-        
+
         let mut buffer = [0u8; 4096];
         let n = socket.read(&mut buffer).await?;
         if n == 0 {
             return Err(CddeError::ConnectionClosed);
         }
-        
+
         let packet = DiameterPacket::parse(&buffer[..n])?;
         if packet.header.command_code != 257 || packet.header.is_request() {
-             return Err(CddeError::InvalidPacket("Expected CEA".to_string()));
+            return Err(CddeError::InvalidPacket("Expected CEA".to_string()));
         }
-        
+
         // Check Result-Code (268)
         if let Some(avp) = packet.find_avp(268) {
             if avp.data.len() >= 4 {
                 let code = u32::from_be_bytes([avp.data[0], avp.data[1], avp.data[2], avp.data[3]]);
-                if code != 2001 { // DIAMETER_SUCCESS
-                     return Err(CddeError::InvalidPacket(format!("Handshake failed with Result-Code: {}", code)));
+                if code != 2001 {
+                    // DIAMETER_SUCCESS
+                    return Err(CddeError::InvalidPacket(format!(
+                        "Handshake failed with Result-Code: {}",
+                        code
+                    )));
                 }
             }
         }
-        
+
         Ok(())
     }
 }

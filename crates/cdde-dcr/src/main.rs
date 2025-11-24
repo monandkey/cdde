@@ -4,12 +4,11 @@ mod routing;
 pub use processor::PacketProcessor;
 pub use routing::{RouteCondition, RouteEntry, RoutingDecision, RoutingEngine};
 
-
-use cdde_proto::{DiameterPacketAction, DiameterPacketRequest};
 use cdde_proto::core_router_service_server::CoreRouterService;
+use cdde_proto::{DiameterPacketAction, DiameterPacketRequest};
 use std::sync::Arc;
-use tracing::info;
 use tonic::{Request, Response, Status};
+use tracing::info;
 
 /// Simple in-memory gRPC service implementation
 pub struct CoreRouterServiceImpl {
@@ -31,7 +30,8 @@ impl CoreRouterService for CoreRouterServiceImpl {
         request: Request<DiameterPacketRequest>,
     ) -> Result<Response<DiameterPacketAction>, Status> {
         let req = request.into_inner();
-        let action = self.processor
+        let action = self
+            .processor
             .process(req)
             .map_err(|e| Status::internal(format!("Processing error: {e}")))?;
         Ok(Response::new(action))
@@ -67,9 +67,9 @@ async fn main() {
     // Start gRPC server
     let addr = "[::1]:50051".parse().unwrap();
     let service = CoreRouterServiceImpl::new(processor);
-    
+
     info!("Starting gRPC server on {}", addr);
-    
+
     tonic::transport::Server::builder()
         .add_service(cdde_proto::core_router_service_server::CoreRouterServiceServer::new(service))
         .serve(addr)

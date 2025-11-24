@@ -4,7 +4,6 @@ mod state_machine;
 pub use connector::TcpClient;
 pub use state_machine::PeerStateMachine;
 
-
 use tracing::info;
 
 #[tokio::main]
