@@ -1,15 +1,17 @@
 mod api;
 mod models;
-mod repository;
 
 mod db;
+mod error;
 
+pub use models::{Dictionary, DictionaryAvp, RoutingRule, ManipulationRule, VirtualRouter, PeerConfig};
 pub use db::PostgresRepository;
-pub use models::{Dictionary, DictionaryAvp, ManipulationRule, RoutingRule};
-pub use repository::{PeerConfig, VirtualRouter};
+pub use error::AppError;
 
 
 use tracing::{error, info};
+
+use axum::Router;
 
 #[tokio::main]
 async fn main() {
@@ -39,10 +41,20 @@ async fn main() {
     let dictionary_manager = std::sync::Arc::new(cdde_diameter_dict::DictionaryManager::new());
 
     // Create API router
-    let app = api::create_router(repository, dictionary_manager);
+    let api_router = api::create_router(repository, dictionary_manager);
+    
+    // Swagger UI
+    use utoipa::OpenApi;
+    use utoipa_swagger_ui::SwaggerUi;
+    use api::ApiDoc;
+    
+    let app = Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .merge(api_router);
 
     // Start HTTP server
     let addr = "0.0.0.0:3000";
+    info!("Starting CMS server on 0.0.0.0:3000");
     info!("Listening on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();

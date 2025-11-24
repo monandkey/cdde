@@ -25,6 +25,10 @@ axum.workspace = true
 sqlx.workspace = true
 anyhow.workspace = true
 chrono = { version = "0.4", features = ["serde"] }
+validator = { version = "0.16", features = ["derive"] }
+thiserror = "1.0"
+utoipa = { version = "4.2", features = ["axum_extras"] }
+utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
 
 
 [dev-dependencies]

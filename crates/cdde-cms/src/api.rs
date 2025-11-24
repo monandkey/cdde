@@ -1,5 +1,6 @@
 use crate::db::PostgresRepository;
-use crate::repository::{PeerConfig, VirtualRouter};
+use crate::models::{PeerConfig, VirtualRouter, Dictionary, RoutingRule, ManipulationRule, DictionaryAvp};
+use crate::error::AppError;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -9,6 +10,8 @@ use axum::{
 };
 use std::sync::Arc;
 use tracing::error;
+use validator::Validate;
+use utoipa::OpenApi;
 
 use cdde_diameter_dict::DictionaryManager;
 
@@ -17,6 +20,43 @@ pub struct AppState {
     pub repository: PostgresRepository,
     pub dictionary_manager: Arc<DictionaryManager>,
 }
+
+/// OpenAPI documentation
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        list_vrs,
+        create_vr,
+        get_vr,
+        update_vr,
+        delete_vr,
+        list_peers,
+        create_peer,
+        get_peer,
+        delete_peer,
+        list_dictionaries,
+        get_dictionary,
+        upload_dictionary,
+        delete_dictionary,
+        list_routing_rules,
+        get_routing_rule,
+        create_routing_rule,
+        update_routing_rule,
+        delete_routing_rule,
+        list_manipulation_rules,
+        get_manipulation_rule,
+        create_manipulation_rule,
+        update_manipulation_rule,
+        delete_manipulation_rule
+    ),
+    components(
+        schemas(VirtualRouter, PeerConfig, Dictionary, DictionaryAvp, RoutingRule, ManipulationRule)
+    ),
+    tags(
+        (name = "cdde", description = "Cloud Diameter Distribution Engine API")
+    )
+)]
+pub struct ApiDoc;
 
 /// API Router
 pub fn create_router(
@@ -69,106 +109,221 @@ pub fn create_router(
 
 // Handlers
 
-async fn list_vrs(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+#[utoipa::path(
+    get,
+    path = "/api/v1/vrs",
+    responses(
+        (status = 200, description = "List all Virtual Routers", body = Vec<VirtualRouter>)
+    )
+)]
+async fn list_vrs(State(state): State<Arc<AppState>>) -> Result<Json<Vec<VirtualRouter>>, AppError> {
     let vrs = state.repository.get_all_vrs().await;
-    Json(vrs)
+    Ok(Json(vrs))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/vrs",
+    request_body = VirtualRouter,
+    responses(
+        (status = 201, description = "Virtual Router created"),
+        (status = 400, description = "Validation error")
+    )
+)]
 async fn create_vr(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<VirtualRouter>,
-) -> impl IntoResponse {
+) -> Result<StatusCode, AppError> {
+    payload.validate()?;
     state.repository.add_vr(payload).await;
-    StatusCode::CREATED
+    Ok(StatusCode::CREATED)
 }
 
-async fn get_vr(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> impl IntoResponse {
+#[utoipa::path(
+    get,
+    path = "/api/v1/vrs/{id}",
+    params(
+        ("id" = String, Path, description = "Virtual Router ID")
+    ),
+    responses(
+        (status = 200, description = "Virtual Router found", body = VirtualRouter),
+        (status = 404, description = "Virtual Router not found")
+    )
+)]
+async fn get_vr(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> Result<Json<VirtualRouter>, AppError> {
     match state.repository.get_vr(&id).await {
-        Some(vr) => (StatusCode::OK, Json(Some(vr))).into_response(),
-        None => (StatusCode::NOT_FOUND, Json(None::<VirtualRouter>)).into_response(),
+        Some(vr) => Ok(Json(vr)),
+        None => Err(AppError::NotFound),
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/v1/vrs/{id}",
+    params(
+        ("id" = String, Path, description = "Virtual Router ID")
+    ),
+    responses(
+        (status = 204, description = "Virtual Router deleted"),
+        (status = 404, description = "Virtual Router not found")
+    )
+)]
 async fn delete_vr(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> Result<StatusCode, AppError> {
     if state.repository.delete_vr(&id).await {
-        StatusCode::NO_CONTENT
+        Ok(StatusCode::NO_CONTENT)
     } else {
-        StatusCode::NOT_FOUND
+        Err(AppError::NotFound)
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/api/v1/vrs/{id}",
+    params(
+        ("id" = String, Path, description = "Virtual Router ID")
+    ),
+    request_body = VirtualRouter,
+    responses(
+        (status = 200, description = "Virtual Router updated"),
+        (status = 404, description = "Virtual Router not found"),
+        (status = 400, description = "Validation error")
+    )
+)]
 async fn update_vr(
     Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
     Json(mut payload): Json<VirtualRouter>,
-) -> impl IntoResponse {
-    // Ensure the ID in the path matches the payload
+) -> Result<StatusCode, AppError> {
     payload.id = id;
+    payload.validate()?;
 
     if state.repository.update_vr(payload).await {
-        StatusCode::OK
+        Ok(StatusCode::OK)
     } else {
-        StatusCode::NOT_FOUND
+        Err(AppError::NotFound)
     }
 }
 
-async fn list_peers(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+#[utoipa::path(
+    get,
+    path = "/api/v1/peers",
+    responses(
+        (status = 200, description = "List all Peers", body = Vec<PeerConfig>)
+    )
+)]
+async fn list_peers(State(state): State<Arc<AppState>>) -> Result<Json<Vec<PeerConfig>>, AppError> {
     let peers = state.repository.get_all_peers().await;
-    Json(peers)
+    Ok(Json(peers))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/peers",
+    request_body = PeerConfig,
+    responses(
+        (status = 201, description = "Peer created"),
+        (status = 400, description = "Validation error")
+    )
+)]
 async fn create_peer(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<PeerConfig>,
-) -> impl IntoResponse {
+) -> Result<StatusCode, AppError> {
+    payload.validate()?;
     state.repository.add_peer(payload).await;
-    StatusCode::CREATED
+    Ok(StatusCode::CREATED)
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/peers/{hostname}",
+    params(
+        ("hostname" = String, Path, description = "Peer hostname")
+    ),
+    responses(
+        (status = 200, description = "Peer found", body = PeerConfig),
+        (status = 404, description = "Peer not found")
+    )
+)]
 async fn get_peer(
     Path(hostname): Path<String>,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> Result<Json<PeerConfig>, AppError> {
     match state.repository.get_peer(&hostname).await {
-        Some(peer) => (StatusCode::OK, Json(Some(peer))).into_response(),
-        None => (StatusCode::NOT_FOUND, Json(None::<PeerConfig>)).into_response(),
+        Some(peer) => Ok(Json(peer)),
+        None => Err(AppError::NotFound),
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/v1/peers/{hostname}",
+    params(
+        ("hostname" = String, Path, description = "Peer hostname")
+    ),
+    responses(
+        (status = 204, description = "Peer deleted"),
+        (status = 404, description = "Peer not found")
+    )
+)]
 async fn delete_peer(
     Path(hostname): Path<String>,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> Result<StatusCode, AppError> {
     if state.repository.delete_peer(&hostname).await {
-        StatusCode::NO_CONTENT
+        Ok(StatusCode::NO_CONTENT)
     } else {
-        StatusCode::NOT_FOUND
+        Err(AppError::NotFound)
     }
 }
 
-async fn list_dictionaries(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+#[utoipa::path(
+    get,
+    path = "/api/v1/dictionaries",
+    responses(
+        (status = 200, description = "List all Dictionaries", body = Vec<Dictionary>)
+    )
+)]
+async fn list_dictionaries(State(state): State<Arc<AppState>>) -> Result<Json<Vec<Dictionary>>, AppError> {
     let dictionaries = state.repository.list_dictionaries().await;
-    Json(dictionaries)
+    Ok(Json(dictionaries))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/dictionaries/{id}",
+    params(
+        ("id" = i32, Path, description = "Dictionary ID")
+    ),
+    responses(
+        (status = 200, description = "Dictionary found", body = Dictionary),
+        (status = 404, description = "Dictionary not found")
+    )
+)]
 async fn get_dictionary(
     Path(id): Path<i32>,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> Result<Json<Dictionary>, AppError> {
     match state.repository.get_dictionary(id).await {
-        Some(dict) => (StatusCode::OK, Json(Some(dict))).into_response(),
-        None => (
-            StatusCode::NOT_FOUND,
-            Json(None::<crate::models::Dictionary>),
-        )
-            .into_response(),
+        Some(dict) => Ok(Json(dict)),
+        None => Err(AppError::NotFound),
     }
 }
 
-async fn upload_dictionary(State(state): State<Arc<AppState>>, body: String) -> impl IntoResponse {
+#[utoipa::path(
+    post,
+    path = "/api/v1/dictionaries",
+    request_body = String,
+    responses(
+        (status = 201, description = "Dictionary uploaded"),
+        (status = 400, description = "Invalid dictionary XML"),
+        (status = 500, description = "Internal server error")
+    )
+)]
+async fn upload_dictionary(State(state): State<Arc<AppState>>, body: String) -> Result<impl IntoResponse, AppError> {
     // Parse XML to extract name and version
     // For now, use simple defaults
     let name = format!("dictionary_{}", chrono::Utc::now().timestamp());
@@ -180,228 +335,271 @@ async fn upload_dictionary(State(state): State<Arc<AppState>>, body: String) -> 
             // Save to database
             match state.repository.save_dictionary(name, version, body).await {
                 Some(id) => {
-                    (StatusCode::CREATED, Json(serde_json::json!({"id": id}))).into_response()
+                    Ok((StatusCode::CREATED, Json(serde_json::json!({"id": id}))))
                 }
-                None => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({"error": "Failed to save dictionary"})),
-                )
-                    .into_response(),
+                None => Err(AppError::Internal("Failed to save dictionary".to_string())),
             }
         }
         Err(e) => {
             error!("Failed to load dictionary: {}", e);
-            (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({"error": e})),
-            )
-                .into_response()
+            Err(AppError::BadRequest(e.to_string()))
         }
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/v1/dictionaries/{id}",
+    params(
+        ("id" = i32, Path, description = "Dictionary ID")
+    ),
+    responses(
+        (status = 204, description = "Dictionary deleted"),
+        (status = 404, description = "Dictionary not found")
+    )
+)]
 async fn delete_dictionary(
     Path(id): Path<i32>,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> Result<StatusCode, AppError> {
     if state.repository.delete_dictionary(id).await {
-        StatusCode::NO_CONTENT
+        Ok(StatusCode::NO_CONTENT)
     } else {
-        StatusCode::NOT_FOUND
+        Err(AppError::NotFound)
     }
 }
 
 // Routing rule handlers
+#[utoipa::path(
+    get,
+    path = "/api/v1/vrs/{vr_id}/routing-rules",
+    params(
+        ("vr_id" = String, Path, description = "Virtual Router ID")
+    ),
+    responses(
+        (status = 200, description = "List routing rules for VR", body = Vec<RoutingRule>)
+    )
+)]
 async fn list_routing_rules(
     Path(vr_id): Path<String>,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> Result<Json<Vec<RoutingRule>>, AppError> {
     let rules = state.repository.list_routing_rules(&vr_id).await;
-    Json(rules)
+    Ok(Json(rules))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/routing-rules/{id}",
+    params(
+        ("id" = i32, Path, description = "Routing Rule ID")
+    ),
+    responses(
+        (status = 200, description = "Routing Rule found", body = RoutingRule),
+        (status = 404, description = "Routing Rule not found")
+    )
+)]
 async fn get_routing_rule(
     Path(id): Path<i32>,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> Result<Json<RoutingRule>, AppError> {
     match state.repository.get_routing_rule(id).await {
-        Some(rule) => (StatusCode::OK, Json(Some(rule))).into_response(),
-        None => (
-            StatusCode::NOT_FOUND,
-            Json(None::<crate::models::RoutingRule>),
-        )
-            .into_response(),
+        Some(rule) => Ok(Json(rule)),
+        None => Err(AppError::NotFound),
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/vrs/{vr_id}/routing-rules",
+    params(
+        ("vr_id" = String, Path, description = "Virtual Router ID")
+    ),
+    request_body = RoutingRule,
+    responses(
+        (status = 201, description = "Routing Rule created"),
+        (status = 400, description = "Validation error"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn create_routing_rule(
     Path(vr_id): Path<String>,
     State(state): State<Arc<AppState>>,
-    Json(mut payload): Json<crate::models::RoutingRule>,
-) -> impl IntoResponse {
+    Json(mut payload): Json<RoutingRule>,
+) -> Result<impl IntoResponse, AppError> {
     // Ensure the VR ID in the path matches the payload
     payload.vr_id = vr_id;
+    payload.validate()?;
 
     match state.repository.create_routing_rule(payload).await {
-        Some(id) => (StatusCode::CREATED, Json(serde_json::json!({"id": id}))).into_response(),
-        None => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({"error": "Failed to create routing rule"})),
-        )
-            .into_response(),
+        Some(id) => Ok((StatusCode::CREATED, Json(serde_json::json!({"id": id})))),
+        None => Err(AppError::Internal("Failed to create routing rule".to_string())),
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/api/v1/routing-rules/{id}",
+    params(
+        ("id" = i32, Path, description = "Routing Rule ID")
+    ),
+    request_body = RoutingRule,
+    responses(
+        (status = 200, description = "Routing Rule updated"),
+        (status = 404, description = "Routing Rule not found"),
+        (status = 400, description = "Validation error")
+    )
+)]
 async fn update_routing_rule(
     Path(id): Path<i32>,
     State(state): State<Arc<AppState>>,
-    Json(mut payload): Json<crate::models::RoutingRule>,
-) -> impl IntoResponse {
-    // Ensure the ID in the path matches the payload
+    Json(mut payload): Json<RoutingRule>,
+) -> Result<StatusCode, AppError> {
     payload.id = id;
+    payload.validate()?;
 
     if state.repository.update_routing_rule(payload).await {
-        StatusCode::OK
+        Ok(StatusCode::OK)
     } else {
-        StatusCode::NOT_FOUND
+        Err(AppError::NotFound)
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/v1/routing-rules/{id}",
+    params(
+        ("id" = i32, Path, description = "Routing Rule ID")
+    ),
+    responses(
+        (status = 204, description = "Routing Rule deleted"),
+        (status = 404, description = "Routing Rule not found")
+    )
+)]
 async fn delete_routing_rule(
     Path(id): Path<i32>,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> Result<StatusCode, AppError> {
     if state.repository.delete_routing_rule(id).await {
-        StatusCode::NO_CONTENT
+        Ok(StatusCode::NO_CONTENT)
     } else {
-        StatusCode::NOT_FOUND
+        Err(AppError::NotFound)
     }
 }
 
 // Manipulation rule handlers
+#[utoipa::path(
+    get,
+    path = "/api/v1/vrs/{vr_id}/manipulation-rules",
+    params(
+        ("vr_id" = String, Path, description = "Virtual Router ID")
+    ),
+    responses(
+        (status = 200, description = "List manipulation rules for VR", body = Vec<ManipulationRule>)
+    )
+)]
 async fn list_manipulation_rules(
     Path(vr_id): Path<String>,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> Result<Json<Vec<ManipulationRule>>, AppError> {
     let rules = state.repository.list_manipulation_rules(&vr_id).await;
-    Json(rules)
+    Ok(Json(rules))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/manipulation-rules/{id}",
+    params(
+        ("id" = i32, Path, description = "Manipulation Rule ID")
+    ),
+    responses(
+        (status = 200, description = "Manipulation Rule found", body = ManipulationRule),
+        (status = 404, description = "Manipulation Rule not found")
+    )
+)]
 async fn get_manipulation_rule(
     Path(id): Path<i32>,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> Result<Json<ManipulationRule>, AppError> {
     match state.repository.get_manipulation_rule(id).await {
-        Some(rule) => (StatusCode::OK, Json(Some(rule))).into_response(),
-        None => (
-            StatusCode::NOT_FOUND,
-            Json(None::<crate::models::ManipulationRule>),
-        )
-            .into_response(),
+        Some(rule) => Ok(Json(rule)),
+        None => Err(AppError::NotFound),
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/vrs/{vr_id}/manipulation-rules",
+    params(
+        ("vr_id" = String, Path, description = "Virtual Router ID")
+    ),
+    request_body = ManipulationRule,
+    responses(
+        (status = 201, description = "Manipulation Rule created"),
+        (status = 400, description = "Validation error"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 async fn create_manipulation_rule(
     Path(vr_id): Path<String>,
     State(state): State<Arc<AppState>>,
-    Json(mut payload): Json<crate::models::ManipulationRule>,
-) -> impl IntoResponse {
-    // Ensure the VR ID in the path matches the payload
+    Json(mut payload): Json<ManipulationRule>,
+) -> Result<impl IntoResponse, AppError> {
     payload.vr_id = vr_id;
+    payload.validate()?;
 
     match state.repository.create_manipulation_rule(payload).await {
-        Some(id) => (StatusCode::CREATED, Json(serde_json::json!({"id": id}))).into_response(),
-        None => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({"error": "Failed to create manipulation rule"})),
-        )
-            .into_response(),
+        Some(id) => Ok((StatusCode::CREATED, Json(serde_json::json!({"id": id})))),
+        None => Err(AppError::Internal("Failed to create manipulation rule".to_string())),
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/api/v1/manipulation-rules/{id}",
+    params(
+        ("id" = i32, Path, description = "Manipulation Rule ID")
+    ),
+    request_body = ManipulationRule,
+    responses(
+        (status = 200, description = "Manipulation Rule updated"),
+        (status = 404, description = "Manipulation Rule not found"),
+        (status = 400, description = "Validation error")
+    )
+)]
 async fn update_manipulation_rule(
     Path(id): Path<i32>,
     State(state): State<Arc<AppState>>,
-    Json(mut payload): Json<crate::models::ManipulationRule>,
-) -> impl IntoResponse {
-    // Ensure the ID in the path matches the payload
+    Json(mut payload): Json<ManipulationRule>,
+) -> Result<StatusCode, AppError> {
     payload.id = id;
+    payload.validate()?;
 
     if state.repository.update_manipulation_rule(payload).await {
-        StatusCode::OK
+        Ok(StatusCode::OK)
     } else {
-        StatusCode::NOT_FOUND
+        Err(AppError::NotFound)
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/api/v1/manipulation-rules/{id}",
+    params(
+        ("id" = i32, Path, description = "Manipulation Rule ID")
+    ),
+    responses(
+        (status = 204, description = "Manipulation Rule deleted"),
+        (status = 404, description = "Manipulation Rule not found")
+    )
+)]
 async fn delete_manipulation_rule(
     Path(id): Path<i32>,
     State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+) -> Result<StatusCode, AppError> {
     if state.repository.delete_manipulation_rule(id).await {
-        StatusCode::NO_CONTENT
+        Ok(StatusCode::NO_CONTENT)
     } else {
-        StatusCode::NOT_FOUND
+        Err(AppError::NotFound)
     }
 }
-
-/*
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use axum::{
-        body::Body,
-        http::{Request, StatusCode},
-    };
-    use tower::ServiceExt; // for `oneshot`
-
-    #[tokio::test]
-    async fn test_list_vrs() {
-        let repository = ConfigRepository::new();
-        repository.add_vr(VirtualRouter {
-            id: "vr1".to_string(),
-            hostname: "h1".to_string(),
-            realm: "r1".to_string(),
-            timeout_ms: 1000,
-        }).await;
-
-        let app = create_router(repository, Arc::new(DictionaryManager::new()));
-
-        let response = app
-            .oneshot(Request::builder().uri("/api/v1/vrs").body(Body::empty()).unwrap())
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-    }
-
-    #[tokio::test]
-    async fn test_create_vr() {
-        let repository = ConfigRepository::new();
-        let app = create_router(repository.clone(), Arc::new(DictionaryManager::new()));
-
-        let vr = VirtualRouter {
-            id: "vr2".to_string(),
-            hostname: "h2".to_string(),
-            realm: "r2".to_string(),
-            timeout_ms: 2000,
-        };
-        let body = serde_json::to_string(&vr).unwrap();
-
-        let response = app
-            .oneshot(
-                Request::builder()
-                    .method("POST")
-                    .uri("/api/v1/vrs")
-                    .header("content-type", "application/json")
-                    .body(Body::from(body))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-        assert!(repository.get_vr("vr2").await.is_some());
-    }
-}
-*/

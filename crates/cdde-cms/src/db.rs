@@ -1,4 +1,4 @@
-use crate::repository::{PeerConfig, VirtualRouter};
+use crate::models::{PeerConfig, VirtualRouter};
 use anyhow::Result;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
