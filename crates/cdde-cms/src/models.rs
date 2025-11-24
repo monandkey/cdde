@@ -5,6 +5,7 @@ use validator::Validate;
 /// Virtual Router configuration
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, Validate, ToSchema)]
 pub struct VirtualRouter {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     #[validate(length(min = 1, message = "ID cannot be empty"))]
     #[schema(example = "vr1")]
     pub id: String,
@@ -17,9 +18,14 @@ pub struct VirtualRouter {
     #[schema(example = "example.com")]
     pub realm: String,
 
+    #[serde(default = "default_timeout")]
     #[validate(range(min = 100, message = "Timeout must be at least 100ms"))]
     #[schema(example = 3000)]
     pub timeout_ms: i32,
+}
+
+fn default_timeout() -> i32 {
+    3000
 }
 
 /// Peer configuration

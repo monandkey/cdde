@@ -136,8 +136,12 @@ async fn list_vrs(
 )]
 async fn create_vr(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<VirtualRouter>,
+    Json(mut payload): Json<VirtualRouter>,
 ) -> Result<StatusCode, AppError> {
+    // Generate ID if not provided
+    if payload.id.is_empty() {
+        payload.id = uuid::Uuid::new_v4().to_string();
+    }
     payload.validate()?;
     state.repository.add_vr(payload).await;
     Ok(StatusCode::CREATED)
