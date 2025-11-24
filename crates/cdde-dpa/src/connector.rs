@@ -94,28 +94,29 @@ impl TcpClient {
         use cdde_core::{DiameterAvp, DiameterHeader, DiameterPacket};
         use tokio::io::AsyncWriteExt;
 
-        let mut avps = Vec::new();
-        // Result-Code (268)
-        avps.push(DiameterAvp {
-            code: 268,
-            flags: 0x40,
-            vendor_id: None,
-            data: 2001u32.to_be_bytes().to_vec(), // DIAMETER_SUCCESS
-        });
-        // Origin-Host (264)
-        avps.push(DiameterAvp {
-            code: 264,
-            flags: 0x40,
-            vendor_id: None,
-            data: b"dpa.example.com".to_vec(),
-        });
-        // Origin-Realm (296)
-        avps.push(DiameterAvp {
-            code: 296,
-            flags: 0x40,
-            vendor_id: None,
-            data: b"example.com".to_vec(),
-        });
+        let avps = vec![
+            // Result-Code (268)
+            DiameterAvp {
+                code: 268,
+                flags: 0x40,
+                vendor_id: None,
+                data: 2001u32.to_be_bytes().to_vec(), // DIAMETER_SUCCESS
+            },
+            // Origin-Host (264)
+            DiameterAvp {
+                code: 264,
+                flags: 0x40,
+                vendor_id: None,
+                data: b"dpa.example.com".to_vec(),
+            },
+            // Origin-Realm (296)
+            DiameterAvp {
+                code: 296,
+                flags: 0x40,
+                vendor_id: None,
+                data: b"example.com".to_vec(),
+            },
+        ];
 
         let header = DiameterHeader {
             version: 1,
@@ -139,42 +140,43 @@ impl TcpClient {
         use cdde_core::{DiameterAvp, DiameterHeader, DiameterPacket};
         use tokio::io::AsyncWriteExt;
 
-        let mut avps = Vec::new();
-        // Origin-Host (264)
-        avps.push(DiameterAvp {
-            code: 264,
-            flags: 0x40, // Mandatory
-            vendor_id: None,
-            data: b"dpa.example.com".to_vec(),
-        });
-        // Origin-Realm (296)
-        avps.push(DiameterAvp {
-            code: 296,
-            flags: 0x40,
-            vendor_id: None,
-            data: b"example.com".to_vec(),
-        });
-        // Host-IP-Address (257) - simplified (127.0.0.1)
-        avps.push(DiameterAvp {
-            code: 257,
-            flags: 0x40,
-            vendor_id: None,
-            data: vec![0, 1, 127, 0, 0, 1],
-        });
-        // Vendor-Id (266)
-        avps.push(DiameterAvp {
-            code: 266,
-            flags: 0x40,
-            vendor_id: None,
-            data: 10415u32.to_be_bytes().to_vec(),
-        });
-        // Product-Name (269)
-        avps.push(DiameterAvp {
-            code: 269,
-            flags: 0,
-            vendor_id: None,
-            data: b"CDDE-DPA".to_vec(),
-        });
+        let avps = vec![
+            // Origin-Host (264)
+            DiameterAvp {
+                code: 264,
+                flags: 0x40, // Mandatory
+                vendor_id: None,
+                data: b"dpa.example.com".to_vec(),
+            },
+            // Origin-Realm (296)
+            DiameterAvp {
+                code: 296,
+                flags: 0x40,
+                vendor_id: None,
+                data: b"example.com".to_vec(),
+            },
+            // Host-IP-Address (257) - simplified (127.0.0.1)
+            DiameterAvp {
+                code: 257,
+                flags: 0x40,
+                vendor_id: None,
+                data: vec![0, 1, 127, 0, 0, 1],
+            },
+            // Vendor-Id (266)
+            DiameterAvp {
+                code: 266,
+                flags: 0x40,
+                vendor_id: None,
+                data: 10415u32.to_be_bytes().to_vec(),
+            },
+            // Product-Name (269)
+            DiameterAvp {
+                code: 269,
+                flags: 0,
+                vendor_id: None,
+                data: b"CDDE-DPA".to_vec(),
+            },
+        ];
 
         let header = DiameterHeader {
             version: 1,
