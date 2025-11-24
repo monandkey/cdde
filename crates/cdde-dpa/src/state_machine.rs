@@ -5,16 +5,16 @@ use serde::{Deserialize, Serialize};
 pub enum PeerState {
     /// Initial state, not connected
     Closed,
-    
+
     /// Attempting to establish connection
     Connecting,
-    
+
     /// CER/CEA exchange in progress
     Negotiating,
-    
+
     /// Connection established and operational
     Open,
-    
+
     /// Connection closing
     Closing,
 }
@@ -51,7 +51,10 @@ impl PeerStateMachine {
                 self.current_state = PeerState::Connecting;
                 Ok(())
             }
-            _ => Err(format!("Cannot connect from state {:?}", self.current_state)),
+            _ => Err(format!(
+                "Cannot connect from state {:?}",
+                self.current_state
+            )),
         }
     }
 
@@ -62,7 +65,10 @@ impl PeerStateMachine {
                 self.current_state = PeerState::Negotiating;
                 Ok(())
             }
-            _ => Err(format!("Cannot negotiate from state {:?}", self.current_state)),
+            _ => Err(format!(
+                "Cannot negotiate from state {:?}",
+                self.current_state
+            )),
         }
     }
 
@@ -114,15 +120,15 @@ mod tests {
     #[test]
     fn test_successful_connection_flow() {
         let mut sm = PeerStateMachine::new("peer01".to_string());
-        
+
         // Closed -> Connecting
         assert!(sm.connect().is_ok());
         assert_eq!(sm.state(), PeerState::Connecting);
-        
+
         // Connecting -> Negotiating
         assert!(sm.start_negotiation().is_ok());
         assert_eq!(sm.state(), PeerState::Negotiating);
-        
+
         // Negotiating -> Open
         assert!(sm.open().is_ok());
         assert_eq!(sm.state(), PeerState::Open);
@@ -132,10 +138,10 @@ mod tests {
     #[test]
     fn test_invalid_state_transitions() {
         let mut sm = PeerStateMachine::new("peer01".to_string());
-        
+
         // Cannot negotiate from Closed
         assert!(sm.start_negotiation().is_err());
-        
+
         // Cannot open from Closed
         assert!(sm.open().is_err());
     }
@@ -143,15 +149,15 @@ mod tests {
     #[test]
     fn test_close_from_open() {
         let mut sm = PeerStateMachine::new("peer01".to_string());
-        
+
         sm.connect().unwrap();
         sm.start_negotiation().unwrap();
         sm.open().unwrap();
-        
+
         // Open -> Closing
         assert!(sm.close().is_ok());
         assert_eq!(sm.state(), PeerState::Closing);
-        
+
         // Closing -> Closed
         sm.closed();
         assert_eq!(sm.state(), PeerState::Closed);

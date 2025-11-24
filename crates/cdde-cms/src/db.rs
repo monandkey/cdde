@@ -1,6 +1,6 @@
-use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
-use crate::repository::{VirtualRouter, PeerConfig};
+use crate::repository::{PeerConfig, VirtualRouter};
 use anyhow::Result;
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
 #[derive(Clone)]
 pub struct PostgresRepository {
@@ -15,26 +15,28 @@ impl PostgresRepository {
             .await?;
 
         // Run migrations
-        sqlx::migrate!("./migrations")
-            .run(&pool)
-            .await?;
+        sqlx::migrate!("./migrations").run(&pool).await?;
 
         Ok(Self { pool })
     }
 
     pub async fn get_all_vrs(&self) -> Vec<VirtualRouter> {
-        sqlx::query_as::<_, VirtualRouter>("SELECT id, hostname, realm, timeout_ms FROM virtual_routers")
-            .fetch_all(&self.pool)
-            .await
-            .unwrap_or_default()
+        sqlx::query_as::<_, VirtualRouter>(
+            "SELECT id, hostname, realm, timeout_ms FROM virtual_routers",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .unwrap_or_default()
     }
 
     pub async fn get_vr(&self, id: &str) -> Option<VirtualRouter> {
-        sqlx::query_as::<_, VirtualRouter>("SELECT id, hostname, realm, timeout_ms FROM virtual_routers WHERE id = $1")
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
-            .unwrap_or(None)
+        sqlx::query_as::<_, VirtualRouter>(
+            "SELECT id, hostname, realm, timeout_ms FROM virtual_routers WHERE id = $1",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .unwrap_or(None)
     }
 
     pub async fn add_vr(&self, vr: VirtualRouter) -> bool {
@@ -52,7 +54,7 @@ impl PostgresRepository {
 
     pub async fn update_vr(&self, vr: VirtualRouter) -> bool {
         sqlx::query(
-            "UPDATE virtual_routers SET hostname = $2, realm = $3, timeout_ms = $4 WHERE id = $1"
+            "UPDATE virtual_routers SET hostname = $2, realm = $3, timeout_ms = $4 WHERE id = $1",
         )
         .bind(&vr.id)
         .bind(&vr.hostname)
@@ -81,11 +83,13 @@ impl PostgresRepository {
     }
 
     pub async fn get_peer(&self, hostname: &str) -> Option<PeerConfig> {
-        sqlx::query_as::<_, PeerConfig>("SELECT hostname, realm, ip_address, port FROM peers WHERE hostname = $1")
-            .bind(hostname)
-            .fetch_optional(&self.pool)
-            .await
-            .unwrap_or(None)
+        sqlx::query_as::<_, PeerConfig>(
+            "SELECT hostname, realm, ip_address, port FROM peers WHERE hostname = $1",
+        )
+        .bind(hostname)
+        .fetch_optional(&self.pool)
+        .await
+        .unwrap_or(None)
     }
 
     pub async fn add_peer(&self, peer: PeerConfig) -> bool {
@@ -122,7 +126,7 @@ impl PostgresRepository {
 
     pub async fn get_dictionary(&self, id: i32) -> Option<crate::models::Dictionary> {
         sqlx::query_as::<_, crate::models::Dictionary>(
-            "SELECT id, name, version, xml_content, created_at FROM dictionaries WHERE id = $1"
+            "SELECT id, name, version, xml_content, created_at FROM dictionaries WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -130,7 +134,12 @@ impl PostgresRepository {
         .unwrap_or(None)
     }
 
-    pub async fn save_dictionary(&self, name: String, version: String, xml_content: String) -> Option<i32> {
+    pub async fn save_dictionary(
+        &self,
+        name: String,
+        version: String,
+        xml_content: String,
+    ) -> Option<i32> {
         sqlx::query_scalar::<_, i32>(
             "INSERT INTO dictionaries (name, version, xml_content) VALUES ($1, $2, $3) RETURNING id"
         )
@@ -219,10 +228,13 @@ impl PostgresRepository {
     }
 
     // Manipulation rule management methods
-    pub async fn list_manipulation_rules(&self, vr_id: &str) -> Vec<crate::models::ManipulationRule> {
+    pub async fn list_manipulation_rules(
+        &self,
+        vr_id: &str,
+    ) -> Vec<crate::models::ManipulationRule> {
         sqlx::query_as::<_, crate::models::ManipulationRule>(
             "SELECT id, vr_id, priority, rule_json, created_at 
-             FROM manipulation_rules WHERE vr_id = $1 ORDER BY priority ASC"
+             FROM manipulation_rules WHERE vr_id = $1 ORDER BY priority ASC",
         )
         .bind(vr_id)
         .fetch_all(&self.pool)
@@ -233,7 +245,7 @@ impl PostgresRepository {
     pub async fn get_manipulation_rule(&self, id: i32) -> Option<crate::models::ManipulationRule> {
         sqlx::query_as::<_, crate::models::ManipulationRule>(
             "SELECT id, vr_id, priority, rule_json, created_at 
-             FROM manipulation_rules WHERE id = $1"
+             FROM manipulation_rules WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -241,10 +253,13 @@ impl PostgresRepository {
         .unwrap_or(None)
     }
 
-    pub async fn create_manipulation_rule(&self, rule: crate::models::ManipulationRule) -> Option<i32> {
+    pub async fn create_manipulation_rule(
+        &self,
+        rule: crate::models::ManipulationRule,
+    ) -> Option<i32> {
         sqlx::query_scalar::<_, i32>(
             "INSERT INTO manipulation_rules (vr_id, priority, rule_json) 
-             VALUES ($1, $2, $3) RETURNING id"
+             VALUES ($1, $2, $3) RETURNING id",
         )
         .bind(&rule.vr_id)
         .bind(rule.priority)
@@ -258,7 +273,7 @@ impl PostgresRepository {
         sqlx::query(
             "UPDATE manipulation_rules 
              SET vr_id = $2, priority = $3, rule_json = $4 
-             WHERE id = $1"
+             WHERE id = $1",
         )
         .bind(rule.id)
         .bind(&rule.vr_id)

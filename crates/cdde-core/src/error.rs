@@ -59,15 +59,15 @@ impl CddeError {
     /// Convert error to Diameter Result-Code
     pub fn to_result_code(&self) -> u32 {
         match self {
-            Self::InvalidPacket(_) => 3008,  // DIAMETER_INVALID_AVP_VALUE
-            Self::MissingAvp(_) => 5005,     // DIAMETER_MISSING_AVP
+            Self::InvalidPacket(_) => 3008, // DIAMETER_INVALID_AVP_VALUE
+            Self::MissingAvp(_) => 5005,    // DIAMETER_MISSING_AVP
             Self::InvalidAvpValue { .. } => 3008,
-            Self::NoRoute(_) => 3003,        // DIAMETER_REALM_NOT_SERVED
-            Self::AllPeersDown(_) => 3002,   // DIAMETER_UNABLE_TO_DELIVER
-            Self::RoutingLoop => 3005,       // DIAMETER_LOOP_DETECTED
+            Self::NoRoute(_) => 3003,      // DIAMETER_REALM_NOT_SERVED
+            Self::AllPeersDown(_) => 3002, // DIAMETER_UNABLE_TO_DELIVER
+            Self::RoutingLoop => 3005,     // DIAMETER_LOOP_DETECTED
             Self::SessionTimeout(_) => 3002,
             Self::GrpcTimeout => 3002,
-            _ => 3010,                       // DIAMETER_UNABLE_TO_COMPLY
+            _ => 3010, // DIAMETER_UNABLE_TO_COMPLY
         }
     }
 
@@ -120,9 +120,15 @@ mod tests {
 
     #[test]
     fn test_error_to_result_code() {
-        assert_eq!(CddeError::InvalidPacket("test".to_string()).to_result_code(), 3008);
+        assert_eq!(
+            CddeError::InvalidPacket("test".to_string()).to_result_code(),
+            3008
+        );
         assert_eq!(CddeError::MissingAvp(264).to_result_code(), 5005);
-        assert_eq!(CddeError::NoRoute("test.realm".to_string()).to_result_code(), 3003);
+        assert_eq!(
+            CddeError::NoRoute("test.realm".to_string()).to_result_code(),
+            3003
+        );
         assert_eq!(CddeError::RoutingLoop.to_result_code(), 3005);
     }
 
@@ -132,10 +138,7 @@ mod tests {
             CddeError::InvalidPacket("test".to_string()).severity(),
             ErrorSeverity::Warning
         );
-        assert_eq!(
-            CddeError::RoutingLoop.severity(),
-            ErrorSeverity::Critical
-        );
+        assert_eq!(CddeError::RoutingLoop.severity(), ErrorSeverity::Critical);
     }
 
     #[test]

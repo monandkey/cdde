@@ -1,8 +1,8 @@
 use cdde_core::{Result, Transport};
-use tokio::net::TcpStream;
-use tokio::io::AsyncReadExt;
-use tracing::{info, error, warn};
 use std::time::Duration;
+use tokio::io::AsyncReadExt;
+use tokio::net::TcpStream;
+use tracing::{error, info, warn};
 
 /// TCP Client for Diameter peer connections
 pub struct TcpClient {
@@ -32,11 +32,13 @@ impl TcpClient {
                     }
                 }
                 Err(e) => {
-                    warn!("Failed to connect to {}: {}. Retrying in {:?}...", 
-                        self.peer_addr, e, self.reconnect_interval);
+                    warn!(
+                        "Failed to connect to {}: {}. Retrying in {:?}...",
+                        self.peer_addr, e, self.reconnect_interval
+                    );
                 }
             }
-            
+
             tokio::time::sleep(self.reconnect_interval).await;
         }
     }
@@ -50,15 +52,15 @@ impl TcpClient {
     /// Handle connected session
     async fn handle_connection<T: Transport>(&self, socket: &mut T) -> Result<()> {
         // TODO: Implement handshake (CER/CEA)
-        
+
         let mut buffer = [0u8; 4096];
-        
+
         loop {
             let n = socket.read(&mut buffer).await?;
             if n == 0 {
                 return Ok(());
             }
-            
+
             // Echo back for now (mock behavior) or process
             // In real DPA, we would handle DWR/DWA and forward requests
         }

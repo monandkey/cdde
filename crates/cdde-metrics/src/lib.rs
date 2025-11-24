@@ -1,8 +1,7 @@
-use prometheus::{
-    Counter, Histogram, IntGauge, Registry,
-    HistogramOpts, Opts, TextEncoder, Encoder,
-};
 use lazy_static::lazy_static;
+use prometheus::{
+    Counter, Encoder, Histogram, HistogramOpts, IntGauge, Opts, Registry, TextEncoder,
+};
 
 lazy_static! {
     /// Global Prometheus registry
@@ -30,8 +29,12 @@ lazy_static! {
 /// Register all metrics with the global registry
 pub fn register_metrics() {
     REGISTRY.register(Box::new(REQUESTS_TOTAL.clone())).unwrap();
-    REGISTRY.register(Box::new(LATENCY_SECONDS.clone())).unwrap();
-    REGISTRY.register(Box::new(ACTIVE_CONNECTIONS.clone())).unwrap();
+    REGISTRY
+        .register(Box::new(LATENCY_SECONDS.clone()))
+        .unwrap();
+    REGISTRY
+        .register(Box::new(ACTIVE_CONNECTIONS.clone()))
+        .unwrap();
     REGISTRY.register(Box::new(ERRORS_TOTAL.clone())).unwrap();
 }
 
@@ -51,7 +54,7 @@ mod tests {
     #[test]
     fn test_metrics_registration() {
         register_metrics();
-        
+
         REQUESTS_TOTAL.inc();
         ACTIVE_CONNECTIONS.set(10);
         LATENCY_SECONDS.observe(0.5);

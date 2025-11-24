@@ -1,4 +1,4 @@
-use crate::rule::{Rule, Condition, Action, Avp};
+use crate::rule::{Action, Avp, Condition, Rule};
 use regex::Regex;
 use thiserror::Error;
 
@@ -7,7 +7,7 @@ use thiserror::Error;
 pub enum EngineError {
     #[error("Invalid regex pattern: {0}")]
     InvalidRegex(String),
-    
+
     #[error("AVP not found: {0}")]
     AvpNotFound(u32),
 }
@@ -36,7 +36,11 @@ impl RuleEngine {
     }
 
     /// Evaluate all conditions (AND logic)
-    fn evaluate_conditions(&self, conditions: &[Condition], avps: &[Avp]) -> Result<bool, EngineError> {
+    fn evaluate_conditions(
+        &self,
+        conditions: &[Condition],
+        avps: &[Avp],
+    ) -> Result<bool, EngineError> {
         for condition in conditions {
             if !self.evaluate_condition(condition, avps)? {
                 return Ok(false);
@@ -48,23 +52,21 @@ impl RuleEngine {
     /// Evaluate single condition
     fn evaluate_condition(&self, condition: &Condition, avps: &[Avp]) -> Result<bool, EngineError> {
         match condition {
-            Condition::AvpExists { code } => {
-                Ok(avps.iter().any(|avp| avp.code == *code))
-            }
-            
-            Condition::AvpEquals { code, value } => {
-                Ok(avps.iter().any(|avp| avp.code == *code && avp.value == *value))
-            }
-            
+            Condition::AvpExists { code } => Ok(avps.iter().any(|avp| avp.code == *code)),
+
+            Condition::AvpEquals { code, value } => Ok(avps
+                .iter()
+                .any(|avp| avp.code == *code && avp.value == *value)),
+
             Condition::AvpMatches { code, pattern } => {
-                let regex = Regex::new(pattern)
-                    .map_err(|e| EngineError::InvalidRegex(e.to_string()))?;
-                
-                Ok(avps.iter().any(|avp| {
-                    avp.code == *code && regex.is_match(&avp.value)
-                }))
+                let regex =
+                    Regex::new(pattern).map_err(|e| EngineError::InvalidRegex(e.to_string()))?;
+
+                Ok(avps
+                    .iter()
+                    .any(|avp| avp.code == *code && regex.is_match(&avp.value)))
             }
-            
+
             Condition::Always => Ok(true),
         }
     }
@@ -86,17 +88,17 @@ impl RuleEngine {
                     value: value.clone(),
                 });
             }
-            
+
             Action::ModifyAvp { code, value } => {
                 if let Some(avp) = avps.iter_mut().find(|avp| avp.code == *code) {
                     avp.value = value.clone();
                 }
             }
-            
+
             Action::RemoveAvp { code } => {
                 avps.retain(|avp| avp.code != *code);
             }
-            
+
             Action::SetAvp { code, value } => {
                 if let Some(avp) = avps.iter_mut().find(|avp| avp.code == *code) {
                     avp.value = value.clone();
@@ -119,14 +121,14 @@ mod tests {
     #[test]
     fn test_avp_exists_condition() {
         let engine = RuleEngine::new(vec![]);
-        let avps = vec![
-            Avp { code: 264, value: "test.host".to_string() },
-        ];
+        let avps = vec![Avp {
+            code: 264,
+            value: "test.host".to_string(),
+        }];
 
-        let result = engine.evaluate_condition(
-            &Condition::AvpExists { code: 264 },
-            &avps,
-        ).unwrap();
+        let result = engine
+            .evaluate_condition(&Condition::AvpExists { code: 264 }, &avps)
+            .unwrap();
 
         assert!(result);
     }
@@ -134,17 +136,20 @@ mod tests {
     #[test]
     fn test_avp_equals_condition() {
         let engine = RuleEngine::new(vec![]);
-        let avps = vec![
-            Avp { code: 264, value: "test.host".to_string() },
-        ];
+        let avps = vec![Avp {
+            code: 264,
+            value: "test.host".to_string(),
+        }];
 
-        let result = engine.evaluate_condition(
-            &Condition::AvpEquals {
-                code: 264,
-                value: "test.host".to_string(),
-            },
-            &avps,
-        ).unwrap();
+        let result = engine
+            .evaluate_condition(
+                &Condition::AvpEquals {
+                    code: 264,
+                    value: "test.host".to_string(),
+                },
+                &avps,
+            )
+            .unwrap();
 
         assert!(result);
     }
@@ -154,13 +159,15 @@ mod tests {
         let engine = RuleEngine::new(vec![]);
         let mut avps = vec![];
 
-        engine.execute_action(
-            &Action::AddAvp {
-                code: 1,
-                value: "user@realm".to_string(),
-            },
-            &mut avps,
-        ).unwrap();
+        engine
+            .execute_action(
+                &Action::AddAvp {
+                    code: 1,
+                    value: "user@realm".to_string(),
+                },
+                &mut avps,
+            )
+            .unwrap();
 
         assert_eq!(avps.len(), 1);
         assert_eq!(avps[0].code, 1);
@@ -170,17 +177,20 @@ mod tests {
     #[test]
     fn test_modify_avp_action() {
         let engine = RuleEngine::new(vec![]);
-        let mut avps = vec![
-            Avp { code: 264, value: "original.host".to_string() },
-        ];
+        let mut avps = vec![Avp {
+            code: 264,
+            value: "original.host".to_string(),
+        }];
 
-        engine.execute_action(
-            &Action::ModifyAvp {
-                code: 264,
-                value: "modified.host".to_string(),
-            },
-            &mut avps,
-        ).unwrap();
+        engine
+            .execute_action(
+                &Action::ModifyAvp {
+                    code: 264,
+                    value: "modified.host".to_string(),
+                },
+                &mut avps,
+            )
+            .unwrap();
 
         assert_eq!(avps[0].value, "modified.host");
     }
@@ -189,14 +199,19 @@ mod tests {
     fn test_remove_avp_action() {
         let engine = RuleEngine::new(vec![]);
         let mut avps = vec![
-            Avp { code: 264, value: "test.host".to_string() },
-            Avp { code: 296, value: "test.realm".to_string() },
+            Avp {
+                code: 264,
+                value: "test.host".to_string(),
+            },
+            Avp {
+                code: 296,
+                value: "test.realm".to_string(),
+            },
         ];
 
-        engine.execute_action(
-            &Action::RemoveAvp { code: 264 },
-            &mut avps,
-        ).unwrap();
+        engine
+            .execute_action(&Action::RemoveAvp { code: 264 }, &mut avps)
+            .unwrap();
 
         assert_eq!(avps.len(), 1);
         assert_eq!(avps[0].code, 296);
@@ -204,21 +219,20 @@ mod tests {
 
     #[test]
     fn test_rule_processing() {
-        let rules = vec![
-            Rule::new(
-                10,
-                vec![Condition::AvpExists { code: 264 }],
-                vec![Action::AddAvp {
-                    code: 1,
-                    value: "added@realm".to_string(),
-                }],
-            ),
-        ];
+        let rules = vec![Rule::new(
+            10,
+            vec![Condition::AvpExists { code: 264 }],
+            vec![Action::AddAvp {
+                code: 1,
+                value: "added@realm".to_string(),
+            }],
+        )];
 
         let engine = RuleEngine::new(rules);
-        let mut avps = vec![
-            Avp { code: 264, value: "test.host".to_string() },
-        ];
+        let mut avps = vec![Avp {
+            code: 264,
+            value: "test.host".to_string(),
+        }];
 
         engine.process(&mut avps).unwrap();
 

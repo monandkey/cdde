@@ -23,7 +23,7 @@ pub enum StandardAvpCode {
     DestinationRealm = 283,
     DestinationHost = 293,
     OriginRealm = 296,
-    
+
     // ========================================
     // 3GPP S6a (TS 29.272)
     // ========================================
@@ -32,7 +32,7 @@ pub enum StandardAvpCode {
     UlaFlags = 1406,
     VisitedPlmnId = 1407,
     RequestedEutranAuthInfo = 1408,
-    
+
     // ========================================
     // 3GPP Gx (TS 29.212)
     // ========================================
@@ -140,8 +140,14 @@ mod tests {
 
     #[test]
     fn test_from_u32() {
-        assert_eq!(StandardAvpCode::from_u32(264), Some(StandardAvpCode::OriginHost));
-        assert_eq!(StandardAvpCode::from_u32(268), Some(StandardAvpCode::ResultCode));
+        assert_eq!(
+            StandardAvpCode::from_u32(264),
+            Some(StandardAvpCode::OriginHost)
+        );
+        assert_eq!(
+            StandardAvpCode::from_u32(268),
+            Some(StandardAvpCode::ResultCode)
+        );
         assert_eq!(StandardAvpCode::from_u32(9999), None);
     }
 
@@ -153,7 +159,13 @@ mod tests {
 
     #[test]
     fn test_data_type() {
-        assert_eq!(StandardAvpCode::OriginHost.data_type(), AvpDataType::DiameterIdentity);
-        assert_eq!(StandardAvpCode::ResultCode.data_type(), AvpDataType::Unsigned32);
+        assert_eq!(
+            StandardAvpCode::OriginHost.data_type(),
+            AvpDataType::DiameterIdentity
+        );
+        assert_eq!(
+            StandardAvpCode::ResultCode.data_type(),
+            AvpDataType::Unsigned32
+        );
     }
 }

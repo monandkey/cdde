@@ -1,5 +1,5 @@
-pub mod rule;
 pub mod engine;
+pub mod rule;
 
-pub use rule::{Rule, Condition, Action, Avp};
-pub use engine::{RuleEngine, EngineError};
+pub use engine::{EngineError, RuleEngine};
+pub use rule::{Action, Avp, Condition, Rule};

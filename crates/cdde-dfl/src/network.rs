@@ -1,10 +1,10 @@
 // Force re-link
-use cdde_core::{DiameterPacket, Result, Transport};
-use tokio::net::TcpListener;
-use tokio::io::AsyncReadExt;
-use tracing::{info, error, debug};
-use std::sync::Arc;
 use crate::store::TransactionStore;
+use cdde_core::{DiameterPacket, Result, Transport};
+use std::sync::Arc;
+use tokio::io::AsyncReadExt;
+use tokio::net::TcpListener;
+use tracing::{debug, error, info};
 
 /// TCP Server for Diameter connections
 pub struct TcpServer {
@@ -28,7 +28,7 @@ impl TcpServer {
                 Ok((socket, addr)) => {
                     info!("New connection from {}", addr);
                     let store = self.store.clone();
-                    
+
                     // Spawn connection handler
                     tokio::spawn(async move {
                         if let Err(e) = Self::handle_connection(socket, store).await {
@@ -44,7 +44,10 @@ impl TcpServer {
     }
 
     /// Handle individual connection
-    async fn handle_connection<T: Transport>(mut socket: T, _store: Arc<TransactionStore>) -> Result<()> {
+    async fn handle_connection<T: Transport>(
+        mut socket: T,
+        _store: Arc<TransactionStore>,
+    ) -> Result<()> {
         let mut buffer = [0u8; 4096]; // 4KB buffer
 
         loop {
@@ -75,11 +78,11 @@ impl TcpServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
     use async_trait::async_trait;
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     use std::pin::Pin;
     use std::task::{Context, Poll};
-    use std::net::{SocketAddr, IpAddr, Ipv4Addr};
+    use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
     // Mock Transport for testing
     struct MockTransport {
@@ -96,11 +99,11 @@ mod tests {
             if me.read_data.is_empty() {
                 return Poll::Ready(Ok(()));
             }
-            
+
             let len = std::cmp::min(buf.remaining(), me.read_data.len());
             buf.put_slice(&me.read_data[..len]);
             me.read_data.drain(..len);
-            
+
             Poll::Ready(Ok(()))
         }
     }
@@ -126,11 +129,17 @@ mod tests {
     #[async_trait]
     impl Transport for MockTransport {
         fn peer_addr(&self) -> Result<SocketAddr> {
-            Ok(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 12345))
+            Ok(SocketAddr::new(
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                12345,
+            ))
         }
 
         fn local_addr(&self) -> Result<SocketAddr> {
-            Ok(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 3868))
+            Ok(SocketAddr::new(
+                IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+                3868,
+            ))
         }
     }
 
@@ -148,14 +157,14 @@ mod tests {
             },
             avps: vec![],
         };
-        
+
         let data = packet.serialize();
         let transport = MockTransport { read_data: data };
         let store = Arc::new(TransactionStore::new());
 
         // This will process one packet and then "close" (read returns 0)
         // We just want to ensure it doesn't panic
-        let result = TcpServer::handle_connection(transport, store).await;
+        let _result = TcpServer::handle_connection(transport, store).await;
         // It might return Ok or error depending on how the mock loop behaves with 0 read
         // In our mock, poll_read puts data once. Next call?
         // Actually our mock keeps putting data forever if we don't clear it.

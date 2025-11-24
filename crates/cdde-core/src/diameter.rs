@@ -48,7 +48,7 @@ impl DiameterHeader {
 
         let version = data[0];
         if version != 1 {
-            return Err(CddeError::InvalidPacket(format!("Invalid version: {}", version)));
+            return Err(CddeError::InvalidPacket(format!("Invalid version: {version}")));
         }
 
         let length = u32::from_be_bytes([data[1], data[2], data[3], 0]) >> 8;
@@ -72,21 +72,21 @@ impl DiameterHeader {
     /// Serialize header to bytes
     pub fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(20);
-        
+
         bytes.push(self.version);
-        
+
         let length_bytes = self.length.to_be_bytes();
         bytes.extend_from_slice(&length_bytes[1..4]);
-        
+
         bytes.push(self.flags);
-        
+
         let cmd_bytes = self.command_code.to_be_bytes();
         bytes.extend_from_slice(&cmd_bytes[1..4]);
-        
+
         bytes.extend_from_slice(&self.application_id.to_be_bytes());
         bytes.extend_from_slice(&self.hop_by_hop_id.to_be_bytes());
         bytes.extend_from_slice(&self.end_to_end_id.to_be_bytes());
-        
+
         bytes
     }
 
@@ -136,7 +136,7 @@ impl DiameterAvp {
         let avp_data = data[offset..offset + data_length].to_vec();
 
         // Calculate padding (align to 4 bytes)
-        let padded_length = ((length + 3) / 4) * 4;
+        let padded_length = length.div_ceil(4) * 4;
 
         Ok((
             Self {
@@ -152,26 +152,26 @@ impl DiameterAvp {
     /// Serialize AVP to bytes
     pub fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
-        
+
         bytes.extend_from_slice(&self.code.to_be_bytes());
         bytes.push(self.flags);
-        
+
         let data_offset = if self.vendor_id.is_some() { 12 } else { 8 };
         let length = data_offset + self.data.len();
         let length_bytes = (length as u32).to_be_bytes();
         bytes.extend_from_slice(&length_bytes[1..4]);
-        
+
         if let Some(vid) = self.vendor_id {
             bytes.extend_from_slice(&vid.to_be_bytes());
         }
-        
+
         bytes.extend_from_slice(&self.data);
-        
+
         // Add padding
         while bytes.len() % 4 != 0 {
             bytes.push(0);
         }
-        
+
         bytes
     }
 }
@@ -180,7 +180,7 @@ impl DiameterPacket {
     /// Parse complete packet from bytes
     pub fn parse(data: &[u8]) -> Result<Self> {
         let header = DiameterHeader::parse(data)?;
-        
+
         if data.len() < header.length as usize {
             return Err(CddeError::InvalidPacket("Packet truncated".to_string()));
         }
@@ -200,21 +200,21 @@ impl DiameterPacket {
     /// Serialize packet to bytes
     pub fn serialize(&self) -> Vec<u8> {
         let mut bytes = Vec::new();
-        
+
         // Serialize AVPs first to calculate total length
         let mut avp_bytes = Vec::new();
         for avp in &self.avps {
             avp_bytes.extend_from_slice(&avp.serialize());
         }
-        
+
         // Update header length
         let total_length = 20 + avp_bytes.len();
         let mut header = self.header.clone();
         header.length = total_length as u32;
-        
+
         bytes.extend_from_slice(&header.serialize());
         bytes.extend_from_slice(&avp_bytes);
-        
+
         bytes
     }
 
@@ -236,11 +236,11 @@ mod tests {
     #[test]
     fn test_header_parse_serialize() {
         let data = vec![
-            1, 0, 0, 20,  // Version, Length (20)
-            0x80, 0, 1, 1,  // Flags (Request), Command Code (257)
-            0, 0, 0, 0,  // Application ID
-            0, 0, 0, 1,  // Hop-by-Hop ID
-            0, 0, 0, 2,  // End-to-End ID
+            1, 0, 0, 20, // Version, Length (20)
+            0x80, 0, 1, 1, // Flags (Request), Command Code (257)
+            0, 0, 0, 0, // Application ID
+            0, 0, 0, 1, // Hop-by-Hop ID
+            0, 0, 0, 2, // End-to-End ID
         ];
 
         let header = DiameterHeader::parse(&data).unwrap();
@@ -256,9 +256,9 @@ mod tests {
     #[test]
     fn test_avp_parse_serialize() {
         let data = vec![
-            0, 0, 1, 8,  // Code (264)
-            0x40, 0, 0, 12,  // Flags (Mandatory), Length (12)
-            0x74, 0x65, 0x73, 0x74,  // Data "test"
+            0, 0, 1, 8, // Code (264)
+            0x40, 0, 0, 12, // Flags (Mandatory), Length (12)
+            0x74, 0x65, 0x73, 0x74, // Data "test"
         ];
 
         let (avp, length) = DiameterAvp::parse(&data).unwrap();
@@ -274,15 +274,15 @@ mod tests {
     #[test]
     fn test_packet_parse() {
         let data = vec![
-            1, 0, 0, 32,  // Version, Length (32)
-            0x80, 0, 1, 1,  // Flags, Command Code
-            0, 0, 0, 0,  // Application ID
-            0, 0, 0, 1,  // Hop-by-Hop ID
-            0, 0, 0, 2,  // End-to-End ID
+            1, 0, 0, 32, // Version, Length (32)
+            0x80, 0, 1, 1, // Flags, Command Code
+            0, 0, 0, 0, // Application ID
+            0, 0, 0, 1, // Hop-by-Hop ID
+            0, 0, 0, 2, // End-to-End ID
             // AVP
-            0, 0, 1, 8,  // Code (264)
-            0x40, 0, 0, 12,  // Flags, Length
-            0x74, 0x65, 0x73, 0x74,  // Data "test"
+            0, 0, 1, 8, // Code (264)
+            0x40, 0, 0, 12, // Flags, Length
+            0x74, 0x65, 0x73, 0x74, // Data "test"
         ];
 
         let packet = DiameterPacket::parse(&data).unwrap();

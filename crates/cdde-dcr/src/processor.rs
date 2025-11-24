@@ -1,7 +1,7 @@
-use cdde_proto::{DiameterPacketRequest, DiameterPacketAction, ActionType};
-use cdde_core::{DiameterPacket, Result};
 use crate::routing::RoutingEngine;
-use cdde_dsl_engine::{RuleEngine, Avp};
+use cdde_core::{DiameterPacket, Result};
+use cdde_dsl_engine::{Avp, RuleEngine};
+use cdde_proto::{ActionType, DiameterPacketAction, DiameterPacketRequest};
 
 /// Packet processor for DCR
 pub struct PacketProcessor {
@@ -24,10 +24,12 @@ impl PacketProcessor {
         let packet = DiameterPacket::parse(&request.raw_payload)?;
 
         // Extract routing parameters
-        let dest_host = packet.find_avp(293)
+        let dest_host = packet
+            .find_avp(293)
             .and_then(|avp| String::from_utf8(avp.data.clone()).ok());
-        
-        let dest_realm = packet.find_avp(283)
+
+        let dest_realm = packet
+            .find_avp(283)
             .and_then(|avp| String::from_utf8(avp.data.clone()).ok());
 
         // Find route
@@ -52,12 +54,14 @@ impl PacketProcessor {
 
         // Apply manipulation rules if configured
         if let Some(ref engine) = self.rule_engine {
-            let mut avps: Vec<Avp> = packet.avps.iter().map(|diameter_avp| {
-                Avp {
+            let mut avps: Vec<Avp> = packet
+                .avps
+                .iter()
+                .map(|diameter_avp| Avp {
                     code: diameter_avp.code,
                     value: String::from_utf8_lossy(&diameter_avp.data).to_string(),
-                }
-            }).collect();
+                })
+                .collect();
 
             // Process with DSL engine
             engine.process(&mut avps).ok();
@@ -81,28 +85,23 @@ impl PacketProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::routing::{RouteEntry, RouteCondition};
+    use crate::routing::{RouteCondition, RouteEntry};
 
     #[test]
     fn test_packet_processor() {
-        let routes = vec![
-            RouteEntry {
-                priority: 10,
-                condition: RouteCondition::Default,
-                target_pool_id: "default-pool".to_string(),
-            },
-        ];
+        let routes = vec![RouteEntry {
+            priority: 10,
+            condition: RouteCondition::Default,
+            target_pool_id: "default-pool".to_string(),
+        }];
 
         let routing_engine = RoutingEngine::new(routes);
         let processor = PacketProcessor::new(routing_engine, None);
 
         // Create simple test packet
         let test_packet = vec![
-            1, 0, 0, 20,  // Header
-            0x80, 0, 1, 1,
-            0, 0, 0, 0,
-            0, 0, 0, 1,
-            0, 0, 0, 2,
+            1, 0, 0, 20, // Header
+            0x80, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2,
         ];
 
         let request = DiameterPacketRequest {

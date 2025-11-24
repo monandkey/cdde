@@ -1,8 +1,8 @@
 use dashmap::DashMap;
-use tokio_stream::StreamExt;
 use std::sync::Arc;
-use tokio_util::time::{DelayQueue, delay_queue::Key};
 use std::time::Duration;
+use tokio_stream::StreamExt;
+use tokio_util::time::{delay_queue::Key, DelayQueue};
 
 use crate::session::TransactionContext;
 
@@ -10,7 +10,7 @@ use crate::session::TransactionContext;
 pub struct TransactionStore {
     /// Map of (ConnectionID, Hop-by-Hop ID) -> TransactionContext
     store: Arc<DashMap<(u64, u32), TransactionContext>>,
-    
+
     /// Delay queue for timeout management
     delay_queue: tokio::sync::Mutex<DelayQueue<(u64, u32)>>,
 }
@@ -35,7 +35,7 @@ impl TransactionStore {
         timeout: Duration,
     ) -> Key {
         let key = (connection_id, hop_by_hop_id);
-        
+
         // Add to delay queue
         let mut delay_queue = self.delay_queue.lock().await;
         let delay_key = delay_queue.insert(key, timeout);
@@ -52,19 +52,23 @@ impl TransactionStore {
 
         // Store in map
         self.store.insert(key, context);
-        
+
         delay_key
     }
 
     /// Remove transaction and cancel timeout
-    pub async fn remove(&self, connection_id: u64, hop_by_hop_id: u32) -> Option<TransactionContext> {
+    pub async fn remove(
+        &self,
+        connection_id: u64,
+        hop_by_hop_id: u32,
+    ) -> Option<TransactionContext> {
         let key = (connection_id, hop_by_hop_id);
-        
+
         if let Some((_, context)) = self.store.remove(&key) {
             // Cancel timeout
             let mut delay_queue = self.delay_queue.lock().await;
             delay_queue.remove(&context.delay_queue_key);
-            
+
             Some(context)
         } else {
             None
@@ -89,7 +93,6 @@ impl TransactionStore {
 
     /// Wait for next timeout
     pub async fn next_timeout(&self) -> Option<(u64, u32)> {
-
         let mut delay_queue = self.delay_queue.lock().await;
         delay_queue.next().await.map(|expired| expired.into_inner())
     }
@@ -108,15 +111,17 @@ mod tests {
     #[tokio::test]
     async fn test_insert_and_get() {
         let store = TransactionStore::new();
-        
-        store.insert(
-            123,
-            456,
-            316,
-            999,
-            "test-session".to_string(),
-            Duration::from_secs(5),
-        ).await;
+
+        store
+            .insert(
+                123,
+                456,
+                316,
+                999,
+                "test-session".to_string(),
+                Duration::from_secs(5),
+            )
+            .await;
 
         let context = store.get(123, 456).unwrap();
         assert_eq!(context.source_connection_id, 123);
@@ -126,15 +131,17 @@ mod tests {
     #[tokio::test]
     async fn test_remove() {
         let store = TransactionStore::new();
-        
-        store.insert(
-            123,
-            456,
-            316,
-            999,
-            "test-session".to_string(),
-            Duration::from_secs(5),
-        ).await;
+
+        store
+            .insert(
+                123,
+                456,
+                316,
+                999,
+                "test-session".to_string(),
+                Duration::from_secs(5),
+            )
+            .await;
 
         assert_eq!(store.len(), 1);
 
@@ -146,15 +153,17 @@ mod tests {
     #[tokio::test]
     async fn test_timeout() {
         let store = TransactionStore::new();
-        
-        store.insert(
-            123,
-            456,
-            316,
-            999,
-            "test-session".to_string(),
-            Duration::from_millis(100),
-        ).await;
+
+        store
+            .insert(
+                123,
+                456,
+                316,
+                999,
+                "test-session".to_string(),
+                Duration::from_millis(100),
+            )
+            .await;
 
         // Wait for timeout
         let expired = store.next_timeout().await.unwrap();

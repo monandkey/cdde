@@ -1,5 +1,5 @@
-use crate::standard::StandardAvpCode;
 use crate::data_type::{AvpDataType, AvpValue, ParseError};
+use crate::standard::StandardAvpCode;
 
 /// AVP information
 #[derive(Debug, Clone)]
@@ -10,10 +10,10 @@ pub struct AvpInfo {
     pub vendor_id: Option<u32>,
 }
 
+use quick_xml::de::from_str;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::RwLock;
-use serde::Deserialize;
-use quick_xml::de::from_str;
 
 /// Dictionary manager for AVP lookup and parsing
 pub struct DictionaryManager {
@@ -70,18 +70,20 @@ impl DictionaryManager {
 
     /// Parse AVP data
     pub fn parse_avp(&self, code: u32, data: &[u8]) -> Result<AvpValue, ParseError> {
-        let info = self.lookup(code)
-            .ok_or(ParseError::UnknownAvpCode(code))?;
-        
+        let info = self.lookup(code).ok_or(ParseError::UnknownAvpCode(code))?;
+
         info.data_type.parse(data)
     }
 
     /// Load dynamic dictionary from XML string
     pub fn load_dynamic_dictionary(&self, xml: &str) -> Result<(), String> {
         let dict: DictionaryXml = from_str(xml).map_err(|e| e.to_string())?;
-        
-        let mut guard = self.dynamic_avps.write().map_err(|_| "Lock poisoned".to_string())?;
-        
+
+        let mut guard = self
+            .dynamic_avps
+            .write()
+            .map_err(|_| "Lock poisoned".to_string())?;
+
         for avp in dict.avps {
             let data_type = match avp.data_type.as_str() {
                 "OctetString" => AvpDataType::OctetString,
@@ -108,10 +110,10 @@ impl DictionaryManager {
                 data_type,
                 vendor_id: avp.vendor_id,
             };
-            
+
             guard.insert(avp.code, info);
         }
-        
+
         Ok(())
     }
 }
@@ -130,7 +132,7 @@ mod tests {
     fn test_lookup_standard_avp() {
         let manager = DictionaryManager::new();
         let info = manager.lookup(264).unwrap(); // Origin-Host
-        
+
         assert_eq!(info.code, 264);
         assert_eq!(info.name, "Origin-Host");
         assert_eq!(info.data_type, AvpDataType::DiameterIdentity);
@@ -141,7 +143,7 @@ mod tests {
     fn test_lookup_unknown_avp() {
         let manager = DictionaryManager::new();
         let info = manager.lookup(99999);
-        
+
         assert!(info.is_none());
     }
 
@@ -150,7 +152,7 @@ mod tests {
         let manager = DictionaryManager::new();
         let data = vec![0x00, 0x00, 0x07, 0xD1]; // 2001
         let result = manager.parse_avp(268, &data).unwrap(); // Result-Code
-        
+
         match result {
             AvpValue::Unsigned32(val) => assert_eq!(val, 2001),
             _ => panic!("Expected Unsigned32"),
@@ -162,7 +164,7 @@ mod tests {
         let manager = DictionaryManager::new();
         let data = vec![0x00, 0x01];
         let result = manager.parse_avp(99999, &data);
-        
+
         assert!(result.is_err());
     }
 
@@ -174,9 +176,11 @@ mod tests {
             <avp name="Test-AVP" code="10001" type="Unsigned32" vendor-id="9999"/>
         </dictionary>
         "#;
-        
-        manager.load_dynamic_dictionary(xml).expect("Failed to load dictionary");
-        
+
+        manager
+            .load_dynamic_dictionary(xml)
+            .expect("Failed to load dictionary");
+
         let info = manager.lookup(10001).unwrap();
         assert_eq!(info.name, "Test-AVP");
         assert_eq!(info.data_type, AvpDataType::Unsigned32);

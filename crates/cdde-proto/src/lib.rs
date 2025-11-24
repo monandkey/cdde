@@ -13,16 +13,16 @@ use serde::{Deserialize, Serialize};
 pub struct DiameterPacketRequest {
     /// Unique ID for SCTP connection within DFL
     pub connection_id: u64,
-    
+
     /// Virtual Router ID determined by DFL from received IP
     pub vr_id: String,
-    
+
     /// Reception timestamp at DFL (nanoseconds)
     pub reception_timestamp: u64,
-    
+
     /// Raw Diameter packet (binary data)
     pub raw_payload: Vec<u8>,
-    
+
     /// Session tracking ID assigned by DFL
     pub session_tx_id: u64,
 }
@@ -32,13 +32,13 @@ pub struct DiameterPacketRequest {
 pub struct DiameterPacketAction {
     /// Action to perform
     pub action_type: ActionType,
-    
+
     /// Target host name for FORWARD action
     pub target_host_name: Option<String>,
-    
+
     /// Final Diameter packet to send (after manipulation)
     pub response_payload: Vec<u8>,
-    
+
     /// Original connection ID for REPLY action
     pub original_connection_id: u64,
 }
@@ -46,9 +46,9 @@ pub struct DiameterPacketAction {
 /// Action type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ActionType {
-    Forward,  // Forward to next hop
-    Reply,    // Send immediate response
-    Discard,  // Discard packet
+    Forward, // Forward to next hop
+    Reply,   // Send immediate response
+    Discard, // Discard packet
 }
 
 // ========================================
@@ -60,10 +60,10 @@ pub enum ActionType {
 pub struct PeerStatusRequest {
     /// Peer node identifier
     pub peer_node_id: String,
-    
+
     /// Current peer status
     pub current_status: PeerStatus,
-    
+
     /// Affected Virtual Router IDs
     pub virtual_router_ids: Vec<String>,
 }
@@ -98,7 +98,7 @@ mod tests {
 
         let json = serde_json::to_string(&req).unwrap();
         let deserialized: DiameterPacketRequest = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(req.connection_id, deserialized.connection_id);
         assert_eq!(req.vr_id, deserialized.vr_id);
     }

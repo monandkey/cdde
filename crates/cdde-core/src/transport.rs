@@ -1,7 +1,7 @@
-use async_trait::async_trait;
-use tokio::io::{AsyncRead, AsyncWrite};
-use std::net::SocketAddr;
 use crate::error::Result;
+use async_trait::async_trait;
+use std::net::SocketAddr;
+use tokio::io::{AsyncRead, AsyncWrite};
 
 /// Abstract transport layer trait
 /// Allows switching between TCP and SCTP (or mocks) transparently
@@ -9,7 +9,7 @@ use crate::error::Result;
 pub trait Transport: AsyncRead + AsyncWrite + Send + Unpin {
     /// Get remote peer address
     fn peer_addr(&self) -> Result<SocketAddr>;
-    
+
     /// Get local address
     fn local_addr(&self) -> Result<SocketAddr>;
 }

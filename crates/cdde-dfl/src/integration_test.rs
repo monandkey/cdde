@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod integration_tests {
-    use cdde_core::{DiameterPacket, DiameterHeader, Transport};
     use crate::network::TcpServer;
     use crate::store::TransactionStore;
+    use cdde_core::{DiameterHeader, DiameterPacket};
     use std::sync::Arc;
     use std::time::Duration;
-    use tokio::net::TcpStream;
     use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpStream;
 
     #[tokio::test]
     async fn test_tcp_connection_and_packet_exchange() {
@@ -30,7 +30,7 @@ mod integration_tests {
             header: DiameterHeader {
                 version: 1,
                 length: 20,
-                flags: 0x80, // Request
+                flags: 0x80,       // Request
                 command_code: 280, // DWR
                 application_id: 0,
                 hop_by_hop_id: 123,

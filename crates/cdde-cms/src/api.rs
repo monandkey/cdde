@@ -1,12 +1,13 @@
+use crate::db::PostgresRepository;
+use crate::repository::{PeerConfig, VirtualRouter};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json, Router, routing::get,
+    routing::get,
+    Json, Router,
 };
 use std::sync::Arc;
-use crate::db::PostgresRepository;
-use crate::repository::{VirtualRouter, PeerConfig};
 use tracing::error;
 
 use cdde_diameter_dict::DictionaryManager;
@@ -18,20 +19,51 @@ pub struct AppState {
 }
 
 /// API Router
-pub fn create_router(repository: PostgresRepository, dictionary_manager: Arc<DictionaryManager>) -> Router {
-    let state = Arc::new(AppState { repository, dictionary_manager });
+pub fn create_router(
+    repository: PostgresRepository,
+    dictionary_manager: Arc<DictionaryManager>,
+) -> Router {
+    let state = Arc::new(AppState {
+        repository,
+        dictionary_manager,
+    });
 
     Router::new()
         .route("/api/v1/vrs", get(list_vrs).post(create_vr))
-        .route("/api/v1/vrs/:id", get(get_vr).put(update_vr).delete(delete_vr))
+        .route(
+            "/api/v1/vrs/:id",
+            get(get_vr).put(update_vr).delete(delete_vr),
+        )
         .route("/api/v1/peers", get(list_peers).post(create_peer))
         .route("/api/v1/peers/:hostname", get(get_peer).delete(delete_peer))
-        .route("/api/v1/dictionaries", get(list_dictionaries).post(upload_dictionary))
-        .route("/api/v1/dictionaries/:id", get(get_dictionary).delete(delete_dictionary))
-        .route("/api/v1/vrs/:vr_id/routing-rules", get(list_routing_rules).post(create_routing_rule))
-        .route("/api/v1/routing-rules/:id", get(get_routing_rule).put(update_routing_rule).delete(delete_routing_rule))
-        .route("/api/v1/vrs/:vr_id/manipulation-rules", get(list_manipulation_rules).post(create_manipulation_rule))
-        .route("/api/v1/manipulation-rules/:id", get(get_manipulation_rule).put(update_manipulation_rule).delete(delete_manipulation_rule))
+        .route(
+            "/api/v1/dictionaries",
+            get(list_dictionaries).post(upload_dictionary),
+        )
+        .route(
+            "/api/v1/dictionaries/:id",
+            get(get_dictionary).delete(delete_dictionary),
+        )
+        .route(
+            "/api/v1/vrs/:vr_id/routing-rules",
+            get(list_routing_rules).post(create_routing_rule),
+        )
+        .route(
+            "/api/v1/routing-rules/:id",
+            get(get_routing_rule)
+                .put(update_routing_rule)
+                .delete(delete_routing_rule),
+        )
+        .route(
+            "/api/v1/vrs/:vr_id/manipulation-rules",
+            get(list_manipulation_rules).post(create_manipulation_rule),
+        )
+        .route(
+            "/api/v1/manipulation-rules/:id",
+            get(get_manipulation_rule)
+                .put(update_manipulation_rule)
+                .delete(delete_manipulation_rule),
+        )
         .with_state(state)
 }
 
@@ -50,10 +82,7 @@ async fn create_vr(
     StatusCode::CREATED
 }
 
-async fn get_vr(
-    Path(id): Path<String>,
-    State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
+async fn get_vr(Path(id): Path<String>, State(state): State<Arc<AppState>>) -> impl IntoResponse {
     match state.repository.get_vr(&id).await {
         Some(vr) => (StatusCode::OK, Json(Some(vr))).into_response(),
         None => (StatusCode::NOT_FOUND, Json(None::<VirtualRouter>)).into_response(),
@@ -78,7 +107,7 @@ async fn update_vr(
 ) -> impl IntoResponse {
     // Ensure the ID in the path matches the payload
     payload.id = id;
-    
+
     if state.repository.update_vr(payload).await {
         StatusCode::OK
     } else {
@@ -131,31 +160,42 @@ async fn get_dictionary(
 ) -> impl IntoResponse {
     match state.repository.get_dictionary(id).await {
         Some(dict) => (StatusCode::OK, Json(Some(dict))).into_response(),
-        None => (StatusCode::NOT_FOUND, Json(None::<crate::models::Dictionary>)).into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(None::<crate::models::Dictionary>),
+        )
+            .into_response(),
     }
 }
 
-async fn upload_dictionary(
-    State(state): State<Arc<AppState>>,
-    body: String,
-) -> impl IntoResponse {
+async fn upload_dictionary(State(state): State<Arc<AppState>>, body: String) -> impl IntoResponse {
     // Parse XML to extract name and version
     // For now, use simple defaults
     let name = format!("dictionary_{}", chrono::Utc::now().timestamp());
     let version = "1.0".to_string();
-    
+
     // Try to load into dictionary manager first
     match state.dictionary_manager.load_dynamic_dictionary(&body) {
         Ok(_) => {
             // Save to database
             match state.repository.save_dictionary(name, version, body).await {
-                Some(id) => (StatusCode::CREATED, Json(serde_json::json!({"id": id}))).into_response(),
-                None => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Failed to save dictionary"}))).into_response(),
+                Some(id) => {
+                    (StatusCode::CREATED, Json(serde_json::json!({"id": id}))).into_response()
+                }
+                None => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(serde_json::json!({"error": "Failed to save dictionary"})),
+                )
+                    .into_response(),
             }
         }
         Err(e) => {
             error!("Failed to load dictionary: {}", e);
-            (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": e}))).into_response()
+            (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({"error": e})),
+            )
+                .into_response()
         }
     }
 }
@@ -186,7 +226,11 @@ async fn get_routing_rule(
 ) -> impl IntoResponse {
     match state.repository.get_routing_rule(id).await {
         Some(rule) => (StatusCode::OK, Json(Some(rule))).into_response(),
-        None => (StatusCode::NOT_FOUND, Json(None::<crate::models::RoutingRule>)).into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(None::<crate::models::RoutingRule>),
+        )
+            .into_response(),
     }
 }
 
@@ -197,10 +241,14 @@ async fn create_routing_rule(
 ) -> impl IntoResponse {
     // Ensure the VR ID in the path matches the payload
     payload.vr_id = vr_id;
-    
+
     match state.repository.create_routing_rule(payload).await {
         Some(id) => (StatusCode::CREATED, Json(serde_json::json!({"id": id}))).into_response(),
-        None => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Failed to create routing rule"}))).into_response(),
+        None => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "Failed to create routing rule"})),
+        )
+            .into_response(),
     }
 }
 
@@ -211,7 +259,7 @@ async fn update_routing_rule(
 ) -> impl IntoResponse {
     // Ensure the ID in the path matches the payload
     payload.id = id;
-    
+
     if state.repository.update_routing_rule(payload).await {
         StatusCode::OK
     } else {
@@ -245,7 +293,11 @@ async fn get_manipulation_rule(
 ) -> impl IntoResponse {
     match state.repository.get_manipulation_rule(id).await {
         Some(rule) => (StatusCode::OK, Json(Some(rule))).into_response(),
-        None => (StatusCode::NOT_FOUND, Json(None::<crate::models::ManipulationRule>)).into_response(),
+        None => (
+            StatusCode::NOT_FOUND,
+            Json(None::<crate::models::ManipulationRule>),
+        )
+            .into_response(),
     }
 }
 
@@ -256,10 +308,14 @@ async fn create_manipulation_rule(
 ) -> impl IntoResponse {
     // Ensure the VR ID in the path matches the payload
     payload.vr_id = vr_id;
-    
+
     match state.repository.create_manipulation_rule(payload).await {
         Some(id) => (StatusCode::CREATED, Json(serde_json::json!({"id": id}))).into_response(),
-        None => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({"error": "Failed to create manipulation rule"}))).into_response(),
+        None => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "Failed to create manipulation rule"})),
+        )
+            .into_response(),
     }
 }
 
@@ -270,7 +326,7 @@ async fn update_manipulation_rule(
 ) -> impl IntoResponse {
     // Ensure the ID in the path matches the payload
     payload.id = id;
-    
+
     if state.repository.update_manipulation_rule(payload).await {
         StatusCode::OK
     } else {

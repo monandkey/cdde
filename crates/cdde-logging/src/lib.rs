@@ -9,8 +9,7 @@ pub fn init() {
 pub fn init_with_level(level: &str) {
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new(level))
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(level)),
         )
         .json()
         .init();
@@ -27,7 +26,7 @@ pub fn init_test() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tracing::{info, warn, error};
+    use tracing::{error, info, warn};
 
     #[test]
     fn test_logging_init() {

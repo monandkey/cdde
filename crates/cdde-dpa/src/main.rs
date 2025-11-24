@@ -1,21 +1,20 @@
-mod state_machine;
 mod connector;
+mod state_machine;
 
-pub use state_machine::PeerStateMachine;
 pub use connector::TcpClient;
+pub use state_machine::PeerStateMachine;
 
-use cdde_logging;
-use cdde_metrics;
+
 use tracing::info;
 
 #[tokio::main]
 async fn main() {
     // Initialize logging
     cdde_logging::init();
-    
+
     // Register metrics
     cdde_metrics::register_metrics();
-    
+
     info!(
         service = "dpa",
         version = env!("CARGO_PKG_VERSION"),
@@ -28,7 +27,7 @@ async fn main() {
 
     // Start Connector
     let client = TcpClient::new(peer_addr);
-    
+
     // Spawn client loop
     tokio::spawn(async move {
         client.start().await;

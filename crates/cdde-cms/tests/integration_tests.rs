@@ -3,7 +3,7 @@
 // Set DATABASE_URL environment variable to run these tests
 // Example: DATABASE_URL=postgres://postgres:postgres@localhost/cdde_test cargo test
 
-use cdde_cms::{PostgresRepository, VirtualRouter, PeerConfig};
+use cdde_cms::{PeerConfig, PostgresRepository, VirtualRouter};
 
 // Helper function to get test database URL
 fn get_test_db_url() -> String {
@@ -15,11 +15,11 @@ fn get_test_db_url() -> String {
 #[ignore] // Run with: cargo test -- --ignored
 async fn test_vr_crud_operations() {
     let db_url = get_test_db_url();
-    
+
     // Create repository
-    let repo = PostgresRepository::new(&db_url)
-        .await
-        .expect("Failed to create repository. Make sure TEST_DATABASE_URL is set and database is running.");
+    let repo = PostgresRepository::new(&db_url).await.expect(
+        "Failed to create repository. Make sure TEST_DATABASE_URL is set and database is running.",
+    );
 
     // Test CREATE
     let vr = VirtualRouter {
@@ -28,7 +28,7 @@ async fn test_vr_crud_operations() {
         realm: "example.com".to_string(),
         timeout_ms: 3000,
     };
-    
+
     assert!(repo.add_vr(vr.clone()).await, "Failed to create VR");
 
     // Test READ
@@ -47,9 +47,9 @@ async fn test_vr_crud_operations() {
         realm: "updated.example.com".to_string(),
         timeout_ms: 5000,
     };
-    
+
     assert!(repo.update_vr(updated_vr).await, "Failed to update VR");
-    
+
     let fetched_vr = repo.get_vr("test_vr1").await.unwrap();
     assert_eq!(fetched_vr.hostname, "updated-host.example.com");
     assert_eq!(fetched_vr.realm, "updated.example.com");
@@ -61,7 +61,10 @@ async fn test_vr_crud_operations() {
 
     // Test DELETE
     assert!(repo.delete_vr("test_vr1").await, "Failed to delete VR");
-    assert!(repo.get_vr("test_vr1").await.is_none(), "VR should be deleted");
+    assert!(
+        repo.get_vr("test_vr1").await.is_none(),
+        "VR should be deleted"
+    );
 }
 
 #[tokio::test]
@@ -79,7 +82,7 @@ async fn test_peer_crud_operations() {
         ip_address: "192.168.1.10".to_string(),
         port: 3868,
     };
-    
+
     assert!(repo.add_peer(peer.clone()).await, "Failed to create peer");
 
     // Test READ
@@ -95,8 +98,14 @@ async fn test_peer_crud_operations() {
     assert!(!peers.is_empty(), "Peer list should not be empty");
 
     // Test DELETE
-    assert!(repo.delete_peer("peer.example.com").await, "Failed to delete peer");
-    assert!(repo.get_peer("peer.example.com").await.is_none(), "Peer should be deleted");
+    assert!(
+        repo.delete_peer("peer.example.com").await,
+        "Failed to delete peer"
+    );
+    assert!(
+        repo.get_peer("peer.example.com").await.is_none(),
+        "Peer should be deleted"
+    );
 }
 
 #[tokio::test]
@@ -112,14 +121,17 @@ async fn test_dictionary_operations() {
     <dictionary>
         <avp name="Test-AVP" code="10001" type="Unsigned32" vendor-id="9999"/>
     </dictionary>
-    "#.to_string();
-    
-    let dict_id = repo.save_dictionary(
-        "test-dict".to_string(),
-        "1.0".to_string(),
-        xml_content.clone()
-    ).await;
-    
+    "#
+    .to_string();
+
+    let dict_id = repo
+        .save_dictionary(
+            "test-dict".to_string(),
+            "1.0".to_string(),
+            xml_content.clone(),
+        )
+        .await;
+
     assert!(dict_id.is_some(), "Failed to create dictionary");
     let dict_id = dict_id.unwrap();
 
@@ -135,8 +147,14 @@ async fn test_dictionary_operations() {
     assert!(!dicts.is_empty(), "Dictionary list should not be empty");
 
     // Test DELETE
-    assert!(repo.delete_dictionary(dict_id).await, "Failed to delete dictionary");
-    assert!(repo.get_dictionary(dict_id).await.is_none(), "Dictionary should be deleted");
+    assert!(
+        repo.delete_dictionary(dict_id).await,
+        "Failed to delete dictionary"
+    );
+    assert!(
+        repo.get_dictionary(dict_id).await.is_none(),
+        "Dictionary should be deleted"
+    );
 }
 
 #[tokio::test]
@@ -167,7 +185,7 @@ async fn test_routing_rule_operations() {
         target_pool: "pool1".to_string(),
         created_at: None,
     };
-    
+
     let rule_id = repo.create_routing_rule(rule).await;
     assert!(rule_id.is_some(), "Failed to create routing rule");
     let rule_id = rule_id.unwrap();
@@ -184,8 +202,11 @@ async fn test_routing_rule_operations() {
     assert!(!rules.is_empty(), "Routing rule list should not be empty");
 
     // Test DELETE
-    assert!(repo.delete_routing_rule(rule_id).await, "Failed to delete routing rule");
-    
+    assert!(
+        repo.delete_routing_rule(rule_id).await,
+        "Failed to delete routing rule"
+    );
+
     // Cleanup
     repo.delete_vr("test_vr").await;
 }

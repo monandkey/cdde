@@ -6,7 +6,7 @@ use thiserror::Error;
 pub enum ConfigError {
     #[error("Failed to load config: {0}")]
     LoadError(String),
-    
+
     #[error("Validation error: {0}")]
     ValidationError(String),
 }
@@ -48,8 +48,7 @@ pub fn load_from_yaml<T>(yaml: &str) -> Result<T, ConfigError>
 where
     T: for<'de> Deserialize<'de>,
 {
-    serde_yaml::from_str(yaml)
-        .map_err(|e| ConfigError::LoadError(e.to_string()))
+    serde_yaml::from_str(yaml).map_err(|e| ConfigError::LoadError(e.to_string()))
 }
 
 #[cfg(test)]

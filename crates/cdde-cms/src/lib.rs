@@ -1,8 +1,8 @@
 // Library exports for cdde-cms
-pub use crate::repository::{VirtualRouter, PeerConfig};
-pub use crate::models::{Dictionary, DictionaryAvp, RoutingRule, ManipulationRule};
 pub use crate::db::PostgresRepository;
+pub use crate::models::{Dictionary, DictionaryAvp, ManipulationRule, RoutingRule};
+pub use crate::repository::{PeerConfig, VirtualRouter};
 
-mod repository;
-mod models;
 mod db;
+mod models;
+mod repository;

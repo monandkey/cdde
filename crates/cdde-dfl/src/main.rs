@@ -1,27 +1,26 @@
+mod client;
+mod integration_test;
+mod network;
 mod session;
 mod store;
-mod client;
-mod network;
-mod integration_test;
 
-pub use session::TransactionContext;
-pub use store::TransactionStore;
 pub use client::DcrClient;
 pub use network::TcpServer;
+pub use session::TransactionContext;
+pub use store::TransactionStore;
 
-use cdde_logging;
-use cdde_metrics;
-use tracing::info;
+
 use std::sync::Arc;
+use tracing::info;
 
 #[tokio::main]
 async fn main() {
     // Initialize logging
     cdde_logging::init();
-    
+
     // Register metrics
     cdde_metrics::register_metrics();
-    
+
     info!(
         service = "dfl",
         version = env!("CARGO_PKG_VERSION"),
@@ -29,9 +28,10 @@ async fn main() {
     );
 
     // Initialize DCR client
-    let dcr_endpoint = std::env::var("DCR_ENDPOINT").unwrap_or_else(|_| "http://[::1]:50051".to_string());
+    let dcr_endpoint =
+        std::env::var("DCR_ENDPOINT").unwrap_or_else(|_| "http://[::1]:50051".to_string());
     let _dcr_client = DcrClient::new(dcr_endpoint.clone());
-    
+
     info!("Initialized DCR client pointing to {}", dcr_endpoint);
 
     // Initialize Session Store
@@ -42,7 +42,7 @@ async fn main() {
     let server = TcpServer::new(bind_addr.clone(), store);
 
     info!("Starting TCP listener on {}", bind_addr);
-    
+
     if let Err(e) = server.start().await {
         info!("Server error: {}", e);
     }

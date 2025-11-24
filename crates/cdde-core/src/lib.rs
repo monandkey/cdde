@@ -8,6 +8,6 @@ pub mod diameter;
 pub mod transport;
 
 // Re-export commonly used types
+pub use diameter::{DiameterAvp, DiameterHeader, DiameterPacket};
 pub use error::{CddeError, ErrorSeverity, Result};
-pub use diameter::{DiameterHeader, DiameterAvp, DiameterPacket};
 pub use transport::Transport;
