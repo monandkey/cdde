@@ -155,4 +155,14 @@ mod tests {
         assert_eq!(ErrorSeverity::Info.to_string(), "info");
         assert_eq!(ErrorSeverity::Critical.to_string(), "critical");
     }
+
+    #[test]
+    fn test_connection_closed_variant() {
+        let err = CddeError::ConnectionClosed;
+        assert_eq!(err.to_string(), "Connection closed by peer");
+        // ConnectionClosed is not explicitly mapped in to_result_code, so it should be UNABLE_TO_COMPLY (3010)
+        assert_eq!(err.to_result_code(), 3010);
+        // It should be a warning severity by default
+        assert_eq!(err.severity(), ErrorSeverity::Warning);
+    }
 }

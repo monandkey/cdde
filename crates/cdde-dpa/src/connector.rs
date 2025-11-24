@@ -1,4 +1,4 @@
-use cdde_core::{Result, Transport};
+use cdde_core::{CddeError, Result, Transport};
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
@@ -192,12 +192,12 @@ impl TcpClient {
         let mut buffer = [0u8; 4096];
         let n = socket.read(&mut buffer).await?;
         if n == 0 {
-            return Err(cdde_core::error::CddeError::ConnectionClosed);
+            return Err(CddeError::ConnectionClosed);
         }
         
         let packet = DiameterPacket::parse(&buffer[..n])?;
         if packet.header.command_code != 257 || packet.header.is_request() {
-             return Err(cdde_core::error::CddeError::InvalidPacket("Expected CEA".to_string()));
+             return Err(CddeError::InvalidPacket("Expected CEA".to_string()));
         }
         
         // Check Result-Code (268)
@@ -205,7 +205,7 @@ impl TcpClient {
             if avp.data.len() >= 4 {
                 let code = u32::from_be_bytes([avp.data[0], avp.data[1], avp.data[2], avp.data[3]]);
                 if code != 2001 { // DIAMETER_SUCCESS
-                     return Err(cdde_core::error::CddeError::InvalidPacket(format!("Handshake failed with Result-Code: {}", code)));
+                     return Err(CddeError::InvalidPacket(format!("Handshake failed with Result-Code: {}", code)));
                 }
             }
         }
