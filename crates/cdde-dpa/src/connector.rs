@@ -2,7 +2,7 @@ use cdde_core::{Result, Transport};
 use std::time::Duration;
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpStream;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 /// TCP Client for Diameter peer connections
 pub struct TcpClient {
@@ -64,9 +64,68 @@ impl TcpClient {
                 return Ok(());
             }
 
-            // Echo back for now (mock behavior) or process
-            // In real DPA, we would handle DWR/DWA and forward requests
+            // Try to parse packet
+            match cdde_core::DiameterPacket::parse(&buffer[..n]) {
+                Ok(packet) => {
+                    // Handle Device-Watchdog-Request (280)
+                    if packet.header.command_code == 280 && packet.header.is_request() {
+                        info!("Received DWR from {}", self.peer_addr);
+                        self.send_dwa(socket, &packet).await?;
+                    } else {
+                        debug!("Received packet: Command Code {}", packet.header.command_code);
+                        // TODO: Forward other requests to DFL/DCR
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to parse packet from {}: {}", self.peer_addr, e);
+                }
+            }
         }
+    }
+
+    async fn send_dwa<T: Transport>(&self, socket: &mut T, request: &cdde_core::DiameterPacket) -> Result<()> {
+        use cdde_core::{DiameterPacket, DiameterHeader, DiameterAvp};
+        use tokio::io::AsyncWriteExt;
+
+        let mut avps = Vec::new();
+        // Result-Code (268)
+        avps.push(DiameterAvp {
+            code: 268,
+            flags: 0x40,
+            vendor_id: None,
+            data: 2001u32.to_be_bytes().to_vec(), // DIAMETER_SUCCESS
+        });
+        // Origin-Host (264)
+        avps.push(DiameterAvp {
+            code: 264,
+            flags: 0x40,
+            vendor_id: None,
+            data: b"dpa.example.com".to_vec(),
+        });
+        // Origin-Realm (296)
+        avps.push(DiameterAvp {
+            code: 296,
+            flags: 0x40,
+            vendor_id: None,
+            data: b"example.com".to_vec(),
+        });
+
+        let header = DiameterHeader {
+            version: 1,
+            length: 0,
+            flags: 0, // Answer
+            command_code: 280,
+            application_id: 0,
+            hop_by_hop_id: request.header.hop_by_hop_id,
+            end_to_end_id: request.header.end_to_end_id,
+        };
+
+        let packet = DiameterPacket { header, avps };
+        let bytes = packet.serialize();
+        socket.write_all(&bytes).await?;
+        
+        info!("Sent DWA to {}", self.peer_addr);
+        Ok(())
     }
 
     async fn send_cer<T: Transport>(&self, socket: &mut T) -> Result<()> {

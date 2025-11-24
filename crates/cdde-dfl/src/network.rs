@@ -4,7 +4,7 @@ use cdde_core::{DiameterPacket, Result, Transport};
 use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpListener;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 /// TCP Server for Diameter connections
 pub struct TcpServer {
@@ -96,9 +96,27 @@ impl TcpServer {
                                     
                                 info!("Received action from DCR: {:?}", action_type);
                                 
-                                // TODO: Implement action handling (Forward/Reply)
-                                if !action.target_host_name.is_empty() {
-                                    debug!("Target host: {}", action.target_host_name);
+                                match action_type {
+                                    cdde_proto::ActionType::Reply => {
+                                        if !action.response_payload.is_empty() {
+                                            debug!("Sending Reply to client, {} bytes", action.response_payload.len());
+                                            use tokio::io::AsyncWriteExt;
+                                            if let Err(e) = socket.write_all(&action.response_payload).await {
+                                                error!("Failed to write response to socket: {}", e);
+                                            }
+                                        }
+                                    }
+                                    cdde_proto::ActionType::Forward => {
+                                        if !action.target_host_name.is_empty() {
+                                            info!("Forwarding packet to target: {}", action.target_host_name);
+                                            // TODO: Implement actual forwarding via DPA or direct connection
+                                        } else {
+                                            warn!("Forward action received but no target host specified");
+                                        }
+                                    }
+                                    cdde_proto::ActionType::Discard => {
+                                        info!("Discarding packet as requested by DCR");
+                                    }
                                 }
                             }
                             Err(e) => error!("Failed to process packet via DCR: {}", e),
