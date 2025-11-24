@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use validator::Validate;
 
 /// Configuration error
 #[derive(Error, Debug)]
@@ -12,10 +13,13 @@ pub enum ConfigError {
 }
 
 /// Common application configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AppConfig {
+    #[validate(length(min = 1))]
     pub service_name: String,
+    #[validate(length(min = 1))]
     pub log_level: String,
+    #[validate(range(min = 1, max = 65535))]
     pub metrics_port: u16,
 }
 
@@ -32,23 +36,28 @@ impl Default for AppConfig {
 /// Load configuration from file
 pub fn load_config<T>(path: &str) -> Result<T, ConfigError>
 where
-    T: for<'de> Deserialize<'de>,
+    T: for<'de> Deserialize<'de> + Validate,
 {
-    config::Config::builder()
+    let config: T = config::Config::builder()
         .add_source(config::File::with_name(path))
         .add_source(config::Environment::with_prefix("CDDE"))
         .build()
         .map_err(|e| ConfigError::LoadError(e.to_string()))?
         .try_deserialize()
-        .map_err(|e| ConfigError::LoadError(e.to_string()))
+        .map_err(|e| ConfigError::LoadError(e.to_string()))?;
+
+    config.validate().map_err(|e| ConfigError::ValidationError(e.to_string()))?;
+    Ok(config)
 }
 
 /// Load configuration from YAML string (for testing)
 pub fn load_from_yaml<T>(yaml: &str) -> Result<T, ConfigError>
 where
-    T: for<'de> Deserialize<'de>,
+    T: for<'de> Deserialize<'de> + Validate,
 {
-    serde_yaml::from_str(yaml).map_err(|e| ConfigError::LoadError(e.to_string()))
+    let config: T = serde_yaml::from_str(yaml).map_err(|e| ConfigError::LoadError(e.to_string()))?;
+    config.validate().map_err(|e| ConfigError::ValidationError(e.to_string()))?;
+    Ok(config)
 }
 
 #[cfg(test)]
@@ -74,5 +83,20 @@ metrics_port: 8080
         assert_eq!(config.service_name, "test-service");
         assert_eq!(config.log_level, "debug");
         assert_eq!(config.metrics_port, 8080);
+    }
+
+    #[test]
+    fn test_validation_error() {
+        let yaml = r#"
+service_name: ""
+log_level: info
+metrics_port: 9090
+"#;
+        let result: Result<AppConfig, _> = load_from_yaml(yaml);
+        assert!(result.is_err());
+        match result {
+            Err(ConfigError::ValidationError(_)) => (), // Expected
+            _ => panic!("Expected ValidationError"),
+        }
     }
 }

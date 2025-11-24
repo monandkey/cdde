@@ -11,3 +11,4 @@ serde.workspace = true
 serde_yaml.workspace = true
 config.workspace = true
 thiserror.workspace = true
+validator = { version = "0.20.0", features = ["derive"] }

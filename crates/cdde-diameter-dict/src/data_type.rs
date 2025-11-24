@@ -76,7 +76,8 @@ impl AvpDataType {
                 if data.len() != 4 {
                     return Err(ParseError::InvalidLength);
                 }
-                let value = u32::from_be_bytes(data.try_into().unwrap());
+                let bytes = data.try_into().map_err(|_| ParseError::InvalidLength)?;
+                let value = u32::from_be_bytes(bytes);
                 Ok(AvpValue::Unsigned32(value))
             }
 
@@ -84,7 +85,8 @@ impl AvpDataType {
                 if data.len() != 8 {
                     return Err(ParseError::InvalidLength);
                 }
-                let value = u64::from_be_bytes(data.try_into().unwrap());
+                let bytes = data.try_into().map_err(|_| ParseError::InvalidLength)?;
+                let value = u64::from_be_bytes(bytes);
                 Ok(AvpValue::Unsigned64(value))
             }
 
@@ -92,7 +94,8 @@ impl AvpDataType {
                 if data.len() != 4 {
                     return Err(ParseError::InvalidLength);
                 }
-                let value = i32::from_be_bytes(data.try_into().unwrap());
+                let bytes = data.try_into().map_err(|_| ParseError::InvalidLength)?;
+                let value = i32::from_be_bytes(bytes);
                 Ok(AvpValue::Integer32(value))
             }
 
@@ -100,7 +103,8 @@ impl AvpDataType {
                 if data.len() != 8 {
                     return Err(ParseError::InvalidLength);
                 }
-                let value = i64::from_be_bytes(data.try_into().unwrap());
+                let bytes = data.try_into().map_err(|_| ParseError::InvalidLength)?;
+                let value = i64::from_be_bytes(bytes);
                 Ok(AvpValue::Integer64(value))
             }
 
@@ -108,7 +112,8 @@ impl AvpDataType {
                 if data.len() != 4 {
                     return Err(ParseError::InvalidLength);
                 }
-                let value = f32::from_be_bytes(data.try_into().unwrap());
+                let bytes = data.try_into().map_err(|_| ParseError::InvalidLength)?;
+                let value = f32::from_be_bytes(bytes);
                 Ok(AvpValue::Float32(value))
             }
 
@@ -116,7 +121,8 @@ impl AvpDataType {
                 if data.len() != 8 {
                     return Err(ParseError::InvalidLength);
                 }
-                let value = f64::from_be_bytes(data.try_into().unwrap());
+                let bytes = data.try_into().map_err(|_| ParseError::InvalidLength)?;
+                let value = f64::from_be_bytes(bytes);
                 Ok(AvpValue::Float64(value))
             }
 
@@ -126,7 +132,8 @@ impl AvpDataType {
                 if data.len() != 4 {
                     return Err(ParseError::InvalidLength);
                 }
-                let value = i32::from_be_bytes(data.try_into().unwrap());
+                let bytes = data.try_into().map_err(|_| ParseError::InvalidLength)?;
+                let value = i32::from_be_bytes(bytes);
                 Ok(AvpValue::Enumerated(value))
             }
 
@@ -134,7 +141,8 @@ impl AvpDataType {
                 if data.len() != 4 {
                     return Err(ParseError::InvalidLength);
                 }
-                let value = u32::from_be_bytes(data.try_into().unwrap());
+                let bytes = data.try_into().map_err(|_| ParseError::InvalidLength)?;
+                let value = u32::from_be_bytes(bytes);
                 Ok(AvpValue::Time(value))
             }
 

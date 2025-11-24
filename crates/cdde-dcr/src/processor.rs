@@ -113,7 +113,7 @@ mod tests {
         };
 
         let action = processor.process(request).unwrap();
-        assert_eq!(action.action_type, ActionType::Forward);
-        assert_eq!(action.target_host_name, Some("default-pool".to_string()));
+        assert_eq!(action.action_type, ActionType::Forward as i32);
+        assert_eq!(action.target_host_name, "default-pool".to_string());
     }
 }
