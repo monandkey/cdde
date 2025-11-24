@@ -51,7 +51,10 @@ impl TcpClient {
 
     /// Handle connected session
     async fn handle_connection<T: Transport>(&self, socket: &mut T) -> Result<()> {
-        // TODO: Implement handshake (CER/CEA)
+        info!("Starting handshake with {}", self.peer_addr);
+        self.send_cer(socket).await?;
+        self.receive_cea(socket).await?;
+        info!("Handshake successful with {}", self.peer_addr);
 
         let mut buffer = [0u8; 4096];
 
@@ -64,5 +67,90 @@ impl TcpClient {
             // Echo back for now (mock behavior) or process
             // In real DPA, we would handle DWR/DWA and forward requests
         }
+    }
+
+    async fn send_cer<T: Transport>(&self, socket: &mut T) -> Result<()> {
+        use cdde_core::{DiameterPacket, DiameterHeader, DiameterAvp};
+        use tokio::io::AsyncWriteExt;
+
+        let mut avps = Vec::new();
+        // Origin-Host (264)
+        avps.push(DiameterAvp {
+            code: 264,
+            flags: 0x40, // Mandatory
+            vendor_id: None,
+            data: b"dpa.example.com".to_vec(),
+        });
+        // Origin-Realm (296)
+        avps.push(DiameterAvp {
+            code: 296,
+            flags: 0x40,
+            vendor_id: None,
+            data: b"example.com".to_vec(),
+        });
+        // Host-IP-Address (257) - simplified (127.0.0.1)
+        avps.push(DiameterAvp {
+            code: 257,
+            flags: 0x40,
+            vendor_id: None,
+            data: vec![0, 1, 127, 0, 0, 1], 
+        });
+        // Vendor-Id (266)
+        avps.push(DiameterAvp {
+            code: 266,
+            flags: 0x40,
+            vendor_id: None,
+            data: 10415u32.to_be_bytes().to_vec(),
+        });
+        // Product-Name (269)
+        avps.push(DiameterAvp {
+            code: 269,
+            flags: 0,
+            vendor_id: None,
+            data: b"CDDE-DPA".to_vec(),
+        });
+
+        let header = DiameterHeader {
+            version: 1,
+            length: 0, // Will be calculated
+            flags: 0x80, // Request
+            command_code: 257,
+            application_id: 0,
+            hop_by_hop_id: rand::random(),
+            end_to_end_id: rand::random(),
+        };
+
+        let packet = DiameterPacket { header, avps };
+        let bytes = packet.serialize();
+        socket.write_all(&bytes).await?;
+        
+        Ok(())
+    }
+
+    async fn receive_cea<T: Transport>(&self, socket: &mut T) -> Result<()> {
+        use cdde_core::DiameterPacket;
+        
+        let mut buffer = [0u8; 4096];
+        let n = socket.read(&mut buffer).await?;
+        if n == 0 {
+            return Err(cdde_core::error::CddeError::ConnectionClosed);
+        }
+        
+        let packet = DiameterPacket::parse(&buffer[..n])?;
+        if packet.header.command_code != 257 || packet.header.is_request() {
+             return Err(cdde_core::error::CddeError::InvalidPacket("Expected CEA".to_string()));
+        }
+        
+        // Check Result-Code (268)
+        if let Some(avp) = packet.find_avp(268) {
+            if avp.data.len() >= 4 {
+                let code = u32::from_be_bytes([avp.data[0], avp.data[1], avp.data[2], avp.data[3]]);
+                if code != 2001 { // DIAMETER_SUCCESS
+                     return Err(cdde_core::error::CddeError::InvalidPacket(format!("Handshake failed with Result-Code: {}", code)));
+                }
+            }
+        }
+        
+        Ok(())
     }
 }

@@ -36,8 +36,8 @@ impl DcrClient {
 
         // For testing/mocking purposes without a running server:
         Ok(DiameterPacketAction {
-            action_type: ActionType::Forward,
-            target_host_name: Some("mock-target".to_string()),
+            action_type: ActionType::Forward as i32,
+            target_host_name: "mock-target".to_string(),
             response_payload: request.raw_payload, // Echo back
             original_connection_id: request.connection_id,
         })

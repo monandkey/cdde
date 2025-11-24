@@ -44,10 +44,21 @@ impl TcpServer {
     }
 
     /// Handle individual connection
+    /// Handle individual connection
     async fn handle_connection<T: Transport>(
         mut socket: T,
         _store: Arc<TransactionStore>,
     ) -> Result<()> {
+        // Connect to DCR
+        // In real impl, this address should be configurable
+        let mut dcr_client: Option<cdde_proto::core_router_service_client::CoreRouterServiceClient<tonic::transport::Channel>> = match cdde_proto::core_router_service_client::CoreRouterServiceClient::connect("http://[::1]:50051").await {
+            Ok(client) => Some(client),
+            Err(e) => {
+                error!("Failed to connect to DCR: {}", e);
+                None
+            }
+        };
+
         let mut buffer = [0u8; 4096]; // 4KB buffer
 
         loop {
@@ -64,7 +75,37 @@ impl TcpServer {
             match DiameterPacket::parse(&buffer[..n]) {
                 Ok(packet) => {
                     debug!("Parsed packet: Command Code {}", packet.header.command_code);
-                    // TODO: Process packet, create transaction, send to DCR
+                    
+                    if let Some(client) = &mut dcr_client {
+                        let request = tonic::Request::new(cdde_proto::DiameterPacketRequest {
+                            connection_id: 0, // Placeholder
+                            vr_id: "default".to_string(), // Placeholder
+                            reception_timestamp: std::time::SystemTime::now()
+                                .duration_since(std::time::UNIX_EPOCH)
+                                .unwrap_or_default()
+                                .as_nanos() as u64,
+                            raw_payload: packet.serialize(),
+                            session_tx_id: 0, // Placeholder
+                        });
+                        
+                        match client.process_packet(request).await {
+                            Ok(response) => {
+                                let action = response.into_inner();
+                                let action_type = cdde_proto::ActionType::try_from(action.action_type)
+                                    .unwrap_or(cdde_proto::ActionType::Discard);
+                                    
+                                info!("Received action from DCR: {:?}", action_type);
+                                
+                                // TODO: Implement action handling (Forward/Reply)
+                                if !action.target_host_name.is_empty() {
+                                    debug!("Target host: {}", action.target_host_name);
+                                }
+                            }
+                            Err(e) => error!("Failed to process packet via DCR: {}", e),
+                        }
+                    } else {
+                        error!("DCR client not available, dropping packet");
+                    }
                 }
                 Err(e) => {
                     error!("Failed to parse packet: {}", e);

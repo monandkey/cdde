@@ -1,0 +1,27 @@
+syntax = "proto3";
+package cdde;
+
+service CoreRouterService {
+  rpc ProcessPacket (DiameterPacketRequest) returns (DiameterPacketAction);
+}
+
+message DiameterPacketRequest {
+  uint64 connection_id = 1;
+  string vr_id = 2;
+  uint64 reception_timestamp = 3;
+  bytes raw_payload = 4;
+  uint64 session_tx_id = 5;
+}
+
+message DiameterPacketAction {
+  ActionType action_type = 1;
+  string target_host_name = 2;
+  bytes response_payload = 3;
+  uint64 original_connection_id = 4;
+}
+
+enum ActionType {
+  FORWARD = 0;
+  REPLY = 1;
+  DISCARD = 2;
+}

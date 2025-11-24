@@ -53,6 +53,9 @@ pub enum CddeError {
 
     #[error("Network error: {0}")]
     NetworkError(String),
+
+    #[error("Connection closed by peer")]
+    ConnectionClosed,
 }
 
 impl CddeError {

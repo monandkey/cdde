@@ -43,8 +43,8 @@ impl PacketProcessor {
         if route.is_none() {
             // No route found - return error action
             return Ok(DiameterPacketAction {
-                action_type: ActionType::Discard,
-                target_host_name: None,
+                action_type: ActionType::Discard as i32,
+                target_host_name: "".to_string(),
                 response_payload: vec![],
                 original_connection_id: request.connection_id,
             });
@@ -74,8 +74,8 @@ impl PacketProcessor {
         let response_payload = packet.serialize();
 
         Ok(DiameterPacketAction {
-            action_type: ActionType::Forward,
-            target_host_name: Some(route.target_peer),
+            action_type: ActionType::Forward as i32,
+            target_host_name: route.target_peer,
             response_payload,
             original_connection_id: request.connection_id,
         })
