@@ -1,29 +1,27 @@
 # Build stage
-FROM rust:1.75-slim-bookworm as builder
+FROM rust:1.88.0-slim-bookworm as builder
 
-WORKDIR /usr/src/cdde
+WORKDIR /usr/src
 
 # Install build dependencies
 RUN apt-get update && \
-    apt-get install -y pkg-config libssl-dev protobuf-compiler && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y pkg-config \
+    libssl-dev \
+    protobuf-compiler \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy manifests
-COPY Cargo.toml Cargo.lock ./
-COPY crates ./crates
+RUN git clone --depth 1 https://github.com/monandkey/cdde.git
+WORKDIR /usr/src/cdde
 
 # Build all binaries
 RUN cargo build --release
 
 # Runtime stage
-FROM debian:bookworm-slim
+FROM registry.access.redhat.com/ubi10-micro:10.1
 
 WORKDIR /usr/local/bin
-
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y ca-certificates libssl3 && \
-    rm -rf /var/lib/apt/lists/*
 
 # Copy binaries from builder
 COPY --from=builder /usr/src/cdde/target/release/cdde-cms .
