@@ -1,8 +1,8 @@
 {
-	"name": "CDDE Dev Container",
-	"build": {
-		"dockerfile": "Dockerfile"
-	},
+	"name": "cdde-dev",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "cdde-dev",
+    "forwardPorts": [8080],
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -15,8 +15,5 @@
 		}
 	},
 	"workspaceFolder": "/workspace",
-	"remoteUser": "vscode" //,
-	// "features": {
-	// 	"ghcr.io/devcontainers/features/docker-in-docker:2": {}
-	// }
+	"remoteUser": "vscode"
 }

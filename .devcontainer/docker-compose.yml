@@ -1,0 +1,31 @@
+services:
+  cdde-dev:
+    image: cdde-dev:0.1
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: cdde-dev
+    hostname: cdde-dev
+    volumes:
+      - ..:.:cached
+    command: /bin/sh -c "while :; do sleep 10; done"
+    environment:
+      POSTGRES_HOST: "db-dev"
+      POSTGRES_DATABASE: "cdde"
+      POSTGRES_PORT: 5432
+      POSTGRES_DRIVER: "postgres"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+
+  db-dev:
+    image: postgres:15.15
+    container_name: cdde-dev-db
+    hostname: cdde-dev-db
+    restart: always
+    ports: 
+      - "5432:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"

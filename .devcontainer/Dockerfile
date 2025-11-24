@@ -10,10 +10,16 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
     protobuf-compiler \
     cmake \
-    lldb
+    lldb \
+    xz-utils
 
 # Update rust to ensure we have the latest stable version
 RUN rustup update stable
+
+# Install Node.js
+ENV NODE_VERSION 20.19.5
+ENV ARCH x64
+RUN curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${ARCH}.tar.xz | tar -xJC /usr/local/ --strip-components=1
 
 # Create the vscode user
 ARG USERNAME=vscode
