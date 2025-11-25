@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS virtual_routers (
 
 -- Create peers table
 CREATE TABLE IF NOT EXISTS peers (
-    hostname VARCHAR(255) PRIMARY KEY,
+    id VARCHAR(255) PRIMARY KEY,
+    hostname VARCHAR(255) NOT NULL,
     realm VARCHAR(255) NOT NULL,
     ip_address VARCHAR(255) NOT NULL,
     port INTEGER NOT NULL DEFAULT 3868,

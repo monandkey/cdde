@@ -11,7 +11,7 @@ use axum::{
     Json, Router,
 };
 use std::sync::Arc;
-use tracing::error;
+use tracing::{debug, error};
 use utoipa::OpenApi;
 use validator::Validate;
 
@@ -77,7 +77,7 @@ pub fn create_router(
             get(get_vr).put(update_vr).delete(delete_vr),
         )
         .route("/api/v1/peers", get(list_peers).post(create_peer))
-        .route("/api/v1/peers/:hostname", get(get_peer).delete(delete_peer))
+        .route("/api/v1/peers/:id", get(get_peer).delete(delete_peer).put(update_peer))
         .route(
             "/api/v1/dictionaries",
             get(list_dictionaries).post(upload_dictionary),
@@ -138,6 +138,7 @@ async fn create_vr(
     State(state): State<Arc<AppState>>,
     Json(mut payload): Json<VirtualRouter>,
 ) -> Result<StatusCode, AppError> {
+    debug!("Creating VR with payload: {:?}", payload);
     // Generate ID if not provided
     if payload.id.is_empty() {
         payload.id = uuid::Uuid::new_v4().to_string();
@@ -208,6 +209,7 @@ async fn update_vr(
     State(state): State<Arc<AppState>>,
     Json(mut payload): Json<VirtualRouter>,
 ) -> Result<StatusCode, AppError> {
+    debug!("Updating VR {} with payload: {:?}", id, payload);
     payload.id = id;
     payload.validate()?;
 
@@ -241,8 +243,13 @@ async fn list_peers(State(state): State<Arc<AppState>>) -> Result<Json<Vec<PeerC
 )]
 async fn create_peer(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<PeerConfig>,
+    Json(mut payload): Json<PeerConfig>,
 ) -> Result<StatusCode, AppError> {
+    debug!("Creating Peer with payload: {:?}", payload);
+    // Generate ID if not provided
+    if payload.id.is_empty() {
+        payload.id = uuid::Uuid::new_v4().to_string();
+    }
     payload.validate()?;
     state.repository.add_peer(payload).await;
     Ok(StatusCode::CREATED)
@@ -260,10 +267,10 @@ async fn create_peer(
     )
 )]
 async fn get_peer(
-    Path(hostname): Path<String>,
+    Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<PeerConfig>, AppError> {
-    match state.repository.get_peer(&hostname).await {
+    match state.repository.get_peer(&id).await {
         Some(peer) => Ok(Json(peer)),
         None => Err(AppError::NotFound),
     }
@@ -281,11 +288,40 @@ async fn get_peer(
     )
 )]
 async fn delete_peer(
-    Path(hostname): Path<String>,
+    Path(id): Path<String>,
     State(state): State<Arc<AppState>>,
 ) -> Result<StatusCode, AppError> {
-    if state.repository.delete_peer(&hostname).await {
+    if state.repository.delete_peer(&id).await {
         Ok(StatusCode::NO_CONTENT)
+    } else {
+        Err(AppError::NotFound)
+    }
+}
+
+#[utoipa::path(
+    put,
+    path = "/api/v1/peers/{id}",
+    params(
+        ("id" = String, Path, description = "Peer ID")
+    ),
+    request_body = PeerConfig,
+    responses(
+        (status = 200, description = "Peer updated"),
+        (status = 404, description = "Peer not found"),
+        (status = 400, description = "Validation error")
+    )
+)]
+async fn update_peer(
+    Path(id): Path<String>,
+    State(state): State<Arc<AppState>>,
+    Json(mut payload): Json<PeerConfig>,
+) -> Result<StatusCode, AppError> {
+    debug!("Updating Peer {} with payload: {:?}", id, payload);
+    payload.id = id;
+    payload.validate()?;
+
+    if state.repository.update_peer(payload).await {
+        Ok(StatusCode::OK)
     } else {
         Err(AppError::NotFound)
     }
@@ -441,6 +477,7 @@ async fn create_routing_rule(
     State(state): State<Arc<AppState>>,
     Json(mut payload): Json<RoutingRule>,
 ) -> Result<impl IntoResponse, AppError> {
+    debug!("Creating Routing Rule for VR {} with payload: {:?}", vr_id, payload);
     // Ensure the VR ID in the path matches the payload
     payload.vr_id = vr_id;
     payload.validate()?;
@@ -471,6 +508,7 @@ async fn update_routing_rule(
     State(state): State<Arc<AppState>>,
     Json(mut payload): Json<RoutingRule>,
 ) -> Result<StatusCode, AppError> {
+    debug!("Updating Routing Rule {} with payload: {:?}", id, payload);
     payload.id = id;
     payload.validate()?;
 
@@ -561,6 +599,7 @@ async fn create_manipulation_rule(
     State(state): State<Arc<AppState>>,
     Json(mut payload): Json<ManipulationRule>,
 ) -> Result<impl IntoResponse, AppError> {
+    debug!("Creating Manipulation Rule for VR {} with payload: {:?}", vr_id, payload);
     payload.vr_id = vr_id;
     payload.validate()?;
 
@@ -590,6 +629,7 @@ async fn update_manipulation_rule(
     State(state): State<Arc<AppState>>,
     Json(mut payload): Json<ManipulationRule>,
 ) -> Result<StatusCode, AppError> {
+    debug!("Updating Manipulation Rule {} with payload: {:?}", id, payload);
     payload.id = id;
     payload.validate()?;
 

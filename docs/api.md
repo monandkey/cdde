@@ -44,9 +44,8 @@ POST /api/v1/vrs
 Content-Type: application/json
 
 {
-  "name": "vr-example",
-  "realm": "example.com",
-  "host": "dra.example.com"
+  "hostname": "vr-example",
+  "realm": "example.com"
 }
 ```
 
@@ -56,9 +55,8 @@ PUT /api/v1/vrs/{vr_id}
 Content-Type: application/json
 
 {
-  "name": "vr-example",
-  "realm": "example.com",
-  "host": "dra.example.com"
+  "hostname": "vr-example",
+  "realm": "example.com"
 }
 ```
 
@@ -87,8 +85,8 @@ POST /api/v1/peers
 Content-Type: application/json
 
 {
-  "vr_id": "uuid",
-  "host": "peer.example.com",
+  "virtual_router_id": "uuid",
+  "hostname": "peer.example.com",
   "realm": "example.com",
   "ip_address": "192.168.1.100",
   "port": 3868,
@@ -103,8 +101,8 @@ PUT /api/v1/peers/{peer_id}
 Content-Type: application/json
 
 {
-  "vr_id": "uuid",
-  "host": "peer.example.com",
+  "virtual_router_id": "uuid",
+  "hostname": "peer.example.com",
   "realm": "example.com",
   "ip_address": "192.168.1.100",
   "port": 3868,
@@ -296,9 +294,8 @@ Error responses include a JSON body with details:
 curl -X POST http://localhost:3000/api/v1/vrs \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "vr-production",
-    "realm": "prod.example.com",
-    "host": "dra.prod.example.com"
+    "hostname": "vr-production",
+    "realm": "prod.example.com"
   }'
 ```
 
@@ -307,8 +304,8 @@ curl -X POST http://localhost:3000/api/v1/vrs \
 curl -X POST http://localhost:3000/api/v1/peers \
   -H "Content-Type: application/json" \
   -d '{
-    "vr_id": "vr-uuid-from-step-1",
-    "host": "hss.example.com",
+    "virtual_router_id": "vr-uuid-from-step-1",
+    "hostname": "hss.example.com",
     "realm": "example.com",
     "ip_address": "192.168.1.100",
     "port": 3868,

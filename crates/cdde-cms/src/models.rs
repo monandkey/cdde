@@ -31,6 +31,10 @@ fn default_timeout() -> i32 {
 /// Peer configuration
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow, Validate, ToSchema)]
 pub struct PeerConfig {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    #[schema(example = "peer1")]
+    pub id: String,
+
     #[validate(length(min = 1, message = "Hostname cannot be empty"))]
     #[schema(example = "peer1.example.com")]
     pub hostname: String,
@@ -46,6 +50,11 @@ pub struct PeerConfig {
     #[validate(range(min = 1, max = 65535, message = "Port must be between 1 and 65535"))]
     #[schema(example = 3868)]
     pub port: i32,
+
+    #[serde(default, rename = "virtual_router_id")]
+    #[sqlx(rename = "virtual_router_id")]
+    #[schema(example = "vr1")]
+    pub vr_id: Option<String>,
 }
 
 /// Dictionary metadata

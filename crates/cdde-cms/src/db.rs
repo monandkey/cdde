@@ -1,6 +1,7 @@
 use crate::models::{PeerConfig, VirtualRouter};
 use anyhow::Result;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use tracing::debug;
 
 #[derive(Clone)]
 pub struct PostgresRepository {
@@ -40,6 +41,7 @@ impl PostgresRepository {
     }
 
     pub async fn add_vr(&self, vr: VirtualRouter) -> bool {
+        debug!("Adding VR to DB: {:?}", vr);
         sqlx::query(
             "INSERT INTO virtual_routers (id, hostname, realm, timeout_ms) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO UPDATE SET hostname = $2, realm = $3, timeout_ms = $4"
         )
@@ -53,6 +55,7 @@ impl PostgresRepository {
     }
 
     pub async fn update_vr(&self, vr: VirtualRouter) -> bool {
+        debug!("Updating VR in DB: {:?}", vr);
         sqlx::query(
             "UPDATE virtual_routers SET hostname = $2, realm = $3, timeout_ms = $4 WHERE id = $1",
         )
@@ -76,38 +79,58 @@ impl PostgresRepository {
     }
 
     pub async fn get_all_peers(&self) -> Vec<PeerConfig> {
-        sqlx::query_as::<_, PeerConfig>("SELECT hostname, realm, ip_address, port FROM peers")
+        sqlx::query_as::<_, PeerConfig>("SELECT id, hostname, realm, ip_address, port, virtual_router_id FROM peers")
             .fetch_all(&self.pool)
             .await
             .unwrap_or_default()
     }
 
-    pub async fn get_peer(&self, hostname: &str) -> Option<PeerConfig> {
+    pub async fn get_peer(&self, id: &str) -> Option<PeerConfig> {
         sqlx::query_as::<_, PeerConfig>(
-            "SELECT hostname, realm, ip_address, port FROM peers WHERE hostname = $1",
+            "SELECT id, hostname, realm, ip_address, port, virtual_router_id FROM peers WHERE id = $1",
         )
-        .bind(hostname)
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
         .unwrap_or(None)
     }
 
     pub async fn add_peer(&self, peer: PeerConfig) -> bool {
+        debug!("Adding Peer to DB: {:?}", peer);
         sqlx::query(
-            "INSERT INTO peers (hostname, realm, ip_address, port) VALUES ($1, $2, $3, $4) ON CONFLICT (hostname) DO UPDATE SET realm = $2, ip_address = $3, port = $4"
+            "INSERT INTO peers (id, hostname, realm, ip_address, port, virtual_router_id) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO UPDATE SET hostname = $2, realm = $3, ip_address = $4, port = $5, virtual_router_id = $6"
         )
+        .bind(&peer.id)
         .bind(&peer.hostname)
         .bind(&peer.realm)
         .bind(&peer.ip_address)
         .bind(peer.port)
+        .bind(&peer.vr_id)
         .execute(&self.pool)
         .await
         .is_ok()
     }
 
-    pub async fn delete_peer(&self, hostname: &str) -> bool {
-        sqlx::query("DELETE FROM peers WHERE hostname = $1")
-            .bind(hostname)
+    pub async fn update_peer(&self, peer: PeerConfig) -> bool {
+        debug!("Updating Peer in DB: {:?}", peer);
+        sqlx::query(
+            "UPDATE peers SET hostname = $2, realm = $3, ip_address = $4, port = $5, virtual_router_id = $6 WHERE id = $1"
+        )
+        .bind(&peer.id)
+        .bind(&peer.hostname)
+        .bind(&peer.realm)
+        .bind(&peer.ip_address)
+        .bind(peer.port)
+        .bind(&peer.vr_id)
+        .execute(&self.pool)
+        .await
+        .map(|result| result.rows_affected() > 0)
+        .unwrap_or(false)
+    }
+
+    pub async fn delete_peer(&self, id: &str) -> bool {
+        sqlx::query("DELETE FROM peers WHERE id = $1")
+            .bind(id)
             .execute(&self.pool)
             .await
             .map(|result| result.rows_affected() > 0)
@@ -184,6 +207,7 @@ impl PostgresRepository {
     }
 
     pub async fn create_routing_rule(&self, rule: crate::models::RoutingRule) -> Option<i32> {
+        debug!("Creating Routing Rule in DB: {:?}", rule);
         sqlx::query_scalar::<_, i32>(
             "INSERT INTO routing_rules (vr_id, priority, realm, application_id, destination_host, target_pool) 
              VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"
@@ -200,6 +224,7 @@ impl PostgresRepository {
     }
 
     pub async fn update_routing_rule(&self, rule: crate::models::RoutingRule) -> bool {
+        debug!("Updating Routing Rule in DB: {:?}", rule);
         sqlx::query(
             "UPDATE routing_rules 
              SET vr_id = $2, priority = $3, realm = $4, application_id = $5, destination_host = $6, target_pool = $7 
@@ -257,6 +282,7 @@ impl PostgresRepository {
         &self,
         rule: crate::models::ManipulationRule,
     ) -> Option<i32> {
+        debug!("Creating Manipulation Rule in DB: {:?}", rule);
         sqlx::query_scalar::<_, i32>(
             "INSERT INTO manipulation_rules (vr_id, priority, rule_json) 
              VALUES ($1, $2, $3) RETURNING id",
@@ -270,6 +296,7 @@ impl PostgresRepository {
     }
 
     pub async fn update_manipulation_rule(&self, rule: crate::models::ManipulationRule) -> bool {
+        debug!("Updating Manipulation Rule in DB: {:?}", rule);
         sqlx::query(
             "UPDATE manipulation_rules 
              SET vr_id = $2, priority = $3, rule_json = $4 
