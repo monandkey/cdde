@@ -77,21 +77,27 @@ async fn test_peer_crud_operations() {
 
     // Test CREATE
     let peer = PeerConfig {
+        id: String::new(), // Will be assigned by database
         hostname: "peer.example.com".to_string(),
         realm: "example.com".to_string(),
         ip_address: "192.168.1.10".to_string(),
         port: 3868,
+        vr_id: None, // Not assigned to a VR in this test
     };
 
     assert!(repo.add_peer(peer.clone()).await, "Failed to create peer");
 
-    // Test READ
-    let fetched_peer = repo.get_peer("peer.example.com").await;
+    // Test READ - get the peer by its generated ID
+    let peers = repo.get_all_peers().await;
+    assert!(!peers.is_empty(), "Failed to create peer");
+    let fetched_peer = peers.iter().find(|p| p.hostname == "peer.example.com");
     assert!(fetched_peer.is_some(), "Failed to fetch peer");
     let fetched_peer = fetched_peer.unwrap();
     assert_eq!(fetched_peer.hostname, "peer.example.com");
     assert_eq!(fetched_peer.ip_address, "192.168.1.10");
     assert_eq!(fetched_peer.port, 3868);
+    
+    let peer_id = fetched_peer.id.clone();
 
     // Test LIST
     let peers = repo.get_all_peers().await;
@@ -99,11 +105,12 @@ async fn test_peer_crud_operations() {
 
     // Test DELETE
     assert!(
-        repo.delete_peer("peer.example.com").await,
+        repo.delete_peer(&peer_id).await,
         "Failed to delete peer"
     );
+    let peers_after_delete = repo.get_all_peers().await;
     assert!(
-        repo.get_peer("peer.example.com").await.is_none(),
+        !peers_after_delete.iter().any(|p| p.id == peer_id),
         "Peer should be deleted"
     );
 }
@@ -174,6 +181,22 @@ async fn test_routing_rule_operations() {
     };
     repo.add_vr(vr).await;
 
+    // Create a peer first for the routing rule
+    let peer = PeerConfig {
+        id: String::new(),
+        hostname: "target-peer.example.com".to_string(),
+        realm: "example.com".to_string(),
+        ip_address: "192.168.1.20".to_string(),
+        port: 3868,
+        vr_id: Some("test_vr".to_string()),
+    };
+    repo.add_peer(peer).await;
+    
+    // Get the peer ID
+    let peers = repo.get_all_peers().await;
+    let target_peer = peers.iter().find(|p| p.hostname == "target-peer.example.com").unwrap();
+    let peer_id = target_peer.id.clone();
+    
     // Test CREATE routing rule
     let rule = cdde_cms::RoutingRule {
         id: 0, // Will be assigned by database
@@ -182,7 +205,7 @@ async fn test_routing_rule_operations() {
         realm: Some("example.realm".to_string()),
         application_id: Some(16777251),
         destination_host: None,
-        target_pool: "pool1".to_string(),
+        peer_id: peer_id.clone(),
         created_at: None,
     };
 
@@ -195,7 +218,7 @@ async fn test_routing_rule_operations() {
     assert!(fetched_rule.is_some(), "Failed to fetch routing rule");
     let fetched_rule = fetched_rule.unwrap();
     assert_eq!(fetched_rule.priority, 10);
-    assert_eq!(fetched_rule.target_pool, "pool1");
+    assert_eq!(fetched_rule.peer_id, peer_id);
 
     // Test LIST
     let rules = repo.list_routing_rules("test_vr").await;
@@ -208,5 +231,6 @@ async fn test_routing_rule_operations() {
     );
 
     // Cleanup
+    repo.delete_peer(&peer_id).await;
     repo.delete_vr("test_vr").await;
 }
