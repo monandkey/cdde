@@ -57,7 +57,7 @@ async fn test_vr_lifecycle() {
         .send()
         .await
         .expect("Failed to send request");
-    
+
     let fetched_updated_vr: VirtualRouter = res.json().await.expect("Failed to parse JSON");
     assert_eq!(fetched_updated_vr.hostname, updated_vr.hostname);
 

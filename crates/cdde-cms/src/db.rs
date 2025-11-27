@@ -79,10 +79,12 @@ impl PostgresRepository {
     }
 
     pub async fn get_all_peers(&self) -> Vec<PeerConfig> {
-        sqlx::query_as::<_, PeerConfig>("SELECT id, hostname, realm, ip_address, port, virtual_router_id FROM peers")
-            .fetch_all(&self.pool)
-            .await
-            .unwrap_or_default()
+        sqlx::query_as::<_, PeerConfig>(
+            "SELECT id, hostname, realm, ip_address, port, virtual_router_id FROM peers",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .unwrap_or_default()
     }
 
     pub async fn get_peer(&self, id: &str) -> Option<PeerConfig> {

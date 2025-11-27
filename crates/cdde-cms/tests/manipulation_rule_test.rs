@@ -17,7 +17,12 @@ async fn test_manipulation_rule_lifecycle() {
         realm: "example.com".to_string(),
         timeout_ms: 3000,
     };
-    client.post(format!("{}/vrs", base_url)).json(&vr).send().await.unwrap();
+    client
+        .post(format!("{}/vrs", base_url))
+        .json(&vr)
+        .send()
+        .await
+        .unwrap();
 
     // 1. Create Manipulation Rule
     // We omit vr_id in payload to test auto-population from path
@@ -65,7 +70,7 @@ async fn test_manipulation_rule_lifecycle() {
 
     // 4. Update Manipulation Rule
     // Note: vr_id is required in body for updates
-    let mut updated_payload = json!({
+    let updated_payload = json!({
         "vr_id": vr_id,
         "priority": 20,
         "rule_json": {
@@ -93,5 +98,9 @@ async fn test_manipulation_rule_lifecycle() {
     assert_eq!(res.status(), StatusCode::NO_CONTENT);
 
     // Cleanup
-    client.delete(format!("{}/vrs/{}", base_url, vr_id)).send().await.unwrap();
+    client
+        .delete(format!("{}/vrs/{}", base_url, vr_id))
+        .send()
+        .await
+        .unwrap();
 }

@@ -96,7 +96,7 @@ async fn test_peer_crud_operations() {
     assert_eq!(fetched_peer.hostname, "peer.example.com");
     assert_eq!(fetched_peer.ip_address, "192.168.1.10");
     assert_eq!(fetched_peer.port, 3868);
-    
+
     let peer_id = fetched_peer.id.clone();
 
     // Test LIST
@@ -104,10 +104,7 @@ async fn test_peer_crud_operations() {
     assert!(!peers.is_empty(), "Peer list should not be empty");
 
     // Test DELETE
-    assert!(
-        repo.delete_peer(&peer_id).await,
-        "Failed to delete peer"
-    );
+    assert!(repo.delete_peer(&peer_id).await, "Failed to delete peer");
     let peers_after_delete = repo.get_all_peers().await;
     assert!(
         !peers_after_delete.iter().any(|p| p.id == peer_id),
@@ -191,12 +188,15 @@ async fn test_routing_rule_operations() {
         vr_id: Some("test_vr".to_string()),
     };
     repo.add_peer(peer).await;
-    
+
     // Get the peer ID
     let peers = repo.get_all_peers().await;
-    let target_peer = peers.iter().find(|p| p.hostname == "target-peer.example.com").unwrap();
+    let target_peer = peers
+        .iter()
+        .find(|p| p.hostname == "target-peer.example.com")
+        .unwrap();
     let peer_id = target_peer.id.clone();
-    
+
     // Test CREATE routing rule
     let rule = cdde_cms::RoutingRule {
         id: 0, // Will be assigned by database

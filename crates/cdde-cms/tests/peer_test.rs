@@ -16,7 +16,12 @@ async fn test_peer_lifecycle() {
         realm: "example.com".to_string(),
         timeout_ms: 3000,
     };
-    client.post(format!("{}/vrs", base_url)).json(&vr).send().await.unwrap();
+    client
+        .post(format!("{}/vrs", base_url))
+        .json(&vr)
+        .send()
+        .await
+        .unwrap();
 
     // 1. Create Peer
     let peer_hostname = format!("peer-{}.example.com", uuid::Uuid::new_v4());
@@ -47,7 +52,10 @@ async fn test_peer_lifecycle() {
 
     assert_eq!(res.status(), StatusCode::OK);
     let peers: Vec<PeerConfig> = res.json().await.expect("Failed to parse JSON");
-    let created_peer = peers.iter().find(|p| p.hostname == peer_hostname).expect("Peer not found");
+    let created_peer = peers
+        .iter()
+        .find(|p| p.hostname == peer_hostname)
+        .expect("Peer not found");
     let peer_id = created_peer.id.clone();
     assert!(!peer_id.is_empty());
     assert_eq!(created_peer.vr_id, Some(vr_id.clone()));
@@ -82,7 +90,7 @@ async fn test_peer_lifecycle() {
         .send()
         .await
         .expect("Failed to send request");
-    
+
     let fetched_updated_peer: PeerConfig = res.json().await.expect("Failed to parse JSON");
     assert_eq!(fetched_updated_peer.port, 3869);
 
@@ -112,7 +120,10 @@ async fn test_peer_lifecycle() {
         .await
         .expect("Failed to send request");
     let peers: Vec<PeerConfig> = res.json().await.unwrap();
-    let matching_peers: Vec<_> = peers.iter().filter(|p| p.hostname == peer_hostname).collect();
+    let matching_peers: Vec<_> = peers
+        .iter()
+        .filter(|p| p.hostname == peer_hostname)
+        .collect();
     assert_eq!(matching_peers.len(), 2);
 
     // 6. Delete Peer
@@ -125,5 +136,9 @@ async fn test_peer_lifecycle() {
     assert_eq!(res.status(), StatusCode::NO_CONTENT);
 
     // Cleanup VR
-    client.delete(format!("{}/vrs/{}", base_url, vr_id)).send().await.unwrap();
+    client
+        .delete(format!("{}/vrs/{}", base_url, vr_id))
+        .send()
+        .await
+        .unwrap();
 }

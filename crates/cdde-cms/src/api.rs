@@ -77,7 +77,10 @@ pub fn create_router(
             get(get_vr).put(update_vr).delete(delete_vr),
         )
         .route("/api/v1/peers", get(list_peers).post(create_peer))
-        .route("/api/v1/peers/:id", get(get_peer).delete(delete_peer).put(update_peer))
+        .route(
+            "/api/v1/peers/:id",
+            get(get_peer).delete(delete_peer).put(update_peer),
+        )
         .route(
             "/api/v1/dictionaries",
             get(list_dictionaries).post(upload_dictionary),
@@ -477,7 +480,10 @@ async fn create_routing_rule(
     State(state): State<Arc<AppState>>,
     Json(mut payload): Json<RoutingRule>,
 ) -> Result<impl IntoResponse, AppError> {
-    debug!("Creating Routing Rule for VR {} with payload: {:?}", vr_id, payload);
+    debug!(
+        "Creating Routing Rule for VR {} with payload: {:?}",
+        vr_id, payload
+    );
     // Ensure the VR ID in the path matches the payload
     payload.vr_id = vr_id;
     payload.validate()?;
@@ -599,7 +605,10 @@ async fn create_manipulation_rule(
     State(state): State<Arc<AppState>>,
     Json(mut payload): Json<ManipulationRule>,
 ) -> Result<impl IntoResponse, AppError> {
-    debug!("Creating Manipulation Rule for VR {} with payload: {:?}", vr_id, payload);
+    debug!(
+        "Creating Manipulation Rule for VR {} with payload: {:?}",
+        vr_id, payload
+    );
     payload.vr_id = vr_id;
     payload.validate()?;
 
@@ -629,7 +638,10 @@ async fn update_manipulation_rule(
     State(state): State<Arc<AppState>>,
     Json(mut payload): Json<ManipulationRule>,
 ) -> Result<StatusCode, AppError> {
-    debug!("Updating Manipulation Rule {} with payload: {:?}", id, payload);
+    debug!(
+        "Updating Manipulation Rule {} with payload: {:?}",
+        id, payload
+    );
     payload.id = id;
     payload.validate()?;
 
