@@ -217,7 +217,7 @@ impl PostgresRepository {
         .bind(&rule.realm)
         .bind(rule.application_id)
         .bind(&rule.destination_host)
-        .bind(&rule.target_pool)
+        .bind(&rule.peer_id)
         .fetch_one(&self.pool)
         .await
         .ok()
@@ -236,7 +236,7 @@ impl PostgresRepository {
         .bind(&rule.realm)
         .bind(rule.application_id)
         .bind(&rule.destination_host)
-        .bind(&rule.target_pool)
+        .bind(&rule.peer_id)
         .execute(&self.pool)
         .await
         .map(|result| result.rows_affected() > 0)

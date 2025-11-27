@@ -91,6 +91,7 @@ pub struct RoutingRule {
 
     #[validate(length(min = 1, message = "VR ID cannot be empty"))]
     #[schema(example = "vr1")]
+    #[serde(default)]
     pub vr_id: String,
 
     #[schema(example = 10)]
@@ -105,9 +106,11 @@ pub struct RoutingRule {
     #[schema(example = "dest.example.com")]
     pub destination_host: Option<String>,
 
-    #[validate(length(min = 1, message = "Target pool cannot be empty"))]
-    #[schema(example = "pool1")]
-    pub target_pool: String,
+    #[validate(length(min = 1, message = "Peer ID cannot be empty"))]
+    #[schema(example = "uuid")]
+    #[serde(rename = "peer_id")]
+    #[sqlx(rename = "target_pool")]
+    pub peer_id: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<chrono::DateTime<chrono::Utc>>,
@@ -121,6 +124,7 @@ pub struct ManipulationRule {
 
     #[validate(length(min = 1, message = "VR ID cannot be empty"))]
     #[schema(example = "vr1")]
+    #[serde(default)]
     pub vr_id: String,
 
     #[schema(example = 10)]
