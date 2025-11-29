@@ -23,7 +23,7 @@ CDDEは **Sans-IO Core + Actor Runtime** パターンを採用し、ロジック
 
 | クレート名 | 責務 | 技術スタック | 利用元 |
 |---|---|---|---|
-| **`cdde-shared`** | **共通型定義**<br>DiameterMessage, AVP, SessionKey等<br>**ゼロコピー基盤** | `bytes::Bytes`, `serde` | 全Core/Runtimeクレート |
+| **`cdde-shared`** | **共通型定義**<br>DiameterMessage, AVP, SessionKey等<br>**Diameterプロトコル定義**<br>Wire Format Parser/Serializer<br>**ゼロコピー基盤** | `bytes::Bytes`, `serde` | 全Core/Runtimeクレート |
 | `cdde-proto` | **内部通信プロトコル定義**<br>gRPC service/message定義 | `tonic`, `prost` | DFL, DCR, CMS |
 | `cdde-diameter-dict` | **Diameter辞書**<br>標準AVP/コマンド定義、パーサー | `nom`, `lazy_static` | DFL-core, DCR-core |
 

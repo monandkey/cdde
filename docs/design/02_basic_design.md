@@ -233,7 +233,7 @@ JSON
     
     - **Lazy Parsing:** ヘッダのみ解析し、AVPは必要時のみデコード。
         
-    - **Zero Copy:** 受信バッファを可能な限り使い回す `Bytes` / `Cow` の活用。
+    - **Zero Copy:** 受信バッファを可能な限り使い回す `Bytes` / `Cow` の活用 (via `cdde-shared`)。
         
 
 ### 6.2. 可用性・信頼性
