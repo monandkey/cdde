@@ -1,0 +1,10 @@
+[package]
+name = "cdde-shared"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bytes = "1.11.0"

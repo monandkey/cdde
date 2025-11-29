@@ -12,13 +12,17 @@ cdde-proto = { path = "../cdde-proto" }
 cdde-logging = { path = "../cdde-logging" }
 cdde-metrics = { path = "../cdde-metrics" }
 tokio.workspace = true
-tokio-util.workspace = true
+tokio-util = { workspace = true, features = ["time"] }
 tokio-stream.workspace = true
 async-trait.workspace = true
 dashmap.workspace = true
 tracing.workspace = true
 tonic.workspace = true
 prost.workspace = true
+futures = "0.3"
+cdde-dfl-core = { version = "0.1.0", path = "../cdde-dfl-core" }
+cdde-dfl-runtime = { version = "0.1.0", path = "../cdde-dfl-runtime" }
+cdde-shared = { version = "0.1.0", path = "../cdde-shared" }
 
 [build-dependencies]
 tonic-build.workspace = true

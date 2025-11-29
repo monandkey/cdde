@@ -11,6 +11,8 @@ pub use store::TransactionStore;
 
 use std::sync::Arc;
 use tracing::info;
+use cdde_dfl_core::types::SessionConfig;
+use cdde_dfl_runtime::session_actor::SessionActor;
 
 #[tokio::main]
 async fn main() {
@@ -35,6 +37,19 @@ async fn main() {
 
     // Initialize Session Store
     let store = Arc::new(TransactionStore::new());
+
+    // Initialize Session Actor
+    let (actor_tx, actor_rx) = tokio::sync::mpsc::channel(100);
+    let (outbound_tx, mut outbound_rx) = tokio::sync::mpsc::channel(100);
+    
+    let session_config = SessionConfig {
+        timeout_duration: std::time::Duration::from_secs(30),
+    };
+    
+    let actor = SessionActor::new(session_config, actor_rx, outbound_tx);
+    tokio::spawn(actor.run());
+    
+    info!("Session Actor started");
 
     // Start TCP Server
     let bind_addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3868".to_string());
