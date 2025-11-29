@@ -1,5 +1,6 @@
-use cdde_dpa_core::fsm::PeerFsm;
-use cdde_dpa_core::types::{FsmAction, FsmEvent, PeerConfig, DiameterMessage};
+use crate::core::fsm::PeerFsm;
+use crate::core::types::{PeerConfig, FsmAction, FsmEvent};
+use cdde_shared::DiameterMessage;
 use tokio::net::TcpStream;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;

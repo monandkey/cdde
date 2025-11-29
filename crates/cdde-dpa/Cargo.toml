@@ -12,10 +12,9 @@ cdde-proto = { path = "../cdde-proto" }
 cdde-logging = { path = "../cdde-logging" }
 cdde-metrics = { path = "../cdde-metrics" }
 tokio.workspace = true
+tokio-util = { workspace = true, features = ["time"] }
 tracing.workspace = true
 async-trait.workspace = true
 serde.workspace = true
 rand = "0.9.2"
-cdde-dpa-core = { version = "0.1.0", path = "../cdde-dpa-core" }
-cdde-dpa-runtime = { version = "0.1.0", path = "../cdde-dpa-runtime" }
 cdde-shared = { version = "0.1.0", path = "../cdde-shared" }
