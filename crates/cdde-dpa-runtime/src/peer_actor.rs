@@ -49,7 +49,7 @@ impl PeerActor {
                     res = socket.read(&mut buf) => {
                         match res {
                             Ok(0) => FsmEvent::ConnectionFailed, // 切断された
-                            Ok(n) => {
+                            Ok(_n) => {
                                 // ※本来はここでバイナリパースを行う
                                 // 簡易的にコマンドコードだけ読み取ったとする
                                 let msg = DiameterMessage::new(280, true); // 仮: DWRなどが来たと想定

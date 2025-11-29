@@ -1,5 +1,5 @@
 use super::types::*;
-use cdde_shared::{DiameterMessage, CMD_CER, CMD_DWR, CMD_ACR};
+use cdde_shared::{DiameterMessage, CMD_CER, CMD_DWR};
 
 pub struct PeerFsm {
     state: PeerState,
@@ -36,8 +36,10 @@ impl PeerFsm {
             (PeerState::WaitConnAck, FsmEvent::ConnectionUp) => {
                 self.state = PeerState::WaitICEA;
                 // CER (Capabilities-Exchange-Request) を作成して送信
-                // ※本来はAVP構築ロジックが入るが、ここではバイト列のみ模擬
-                let cer_bytes = vec![0x01, 0x00, 0x00, 0x00]; 
+                // TODO: 本来はAVP構築ロジックが必要だが、ここでは簡易実装
+                // 実際の実装では cdde_core::DiameterPacket を使って構築すべき
+                let _cer = DiameterMessage::new(CMD_CER, true);
+                let cer_bytes = vec![0x01, 0x00, 0x00, 0x00]; // 仮のシリアライズ結果
                 actions.push(FsmAction::SendBytes(cer_bytes));
             }
             
@@ -68,7 +70,9 @@ impl PeerFsm {
                 } else {
                     // DWR (Device-Watchdog-Request) 送信
                     self.watchdog_failures += 1;
-                    let dwr_bytes = vec![0x02, 0x00, 0x00, 0x00]; 
+                    // TODO: 本来は DiameterMessage::new(CMD_DWR, true) でメッセージ構築
+                    let _dwr = DiameterMessage::new(CMD_DWR, true);
+                    let dwr_bytes = vec![0x02, 0x00, 0x00, 0x00]; // 仮のシリアライズ結果
                     actions.push(FsmAction::SendBytes(dwr_bytes));
                     actions.push(FsmAction::ResetWatchdogTimer); // 次のタイマーセット
                 }
