@@ -1,13 +1,12 @@
-use cdde_dcr_core::router::{RouterCore, RouteAction};
-use cdde_shared::DiameterMessage;
 use cdde_core::{DiameterPacket, DiameterAvp};
-use cdde_proto::{
-    core_router_service_server::{CoreRouterService, CoreRouterServiceServer},
-    DiameterPacketAction, DiameterPacketRequest, ActionType,
-};
-use arc_swap::ArcSwap;
-use std::sync::Arc;
+use cdde_proto::cdde::core_router_service_server::{CoreRouterService, CoreRouterServiceServer};
+use cdde_proto::cdde::{DiameterPacketRequest, DiameterPacketAction, ActionType};
+// use cdde_proto::internal::{RoutingUpdateService, PeerStatusUpdate}; // Unused
+use crate::core::router::{RouterCore, RouteAction};
+use cdde_shared::DiameterMessage;
 use tonic::{Request, Response, Status};
+use std::sync::Arc;
+use arc_swap::ArcSwap;
 
 pub struct DcrService {
     // ★ Lock-Free Configuration Update

@@ -17,8 +17,10 @@ tracing.workspace = true
 serde.workspace = true
 tonic.workspace = true
 prost.workspace = true
-cdde-dcr-core = { version = "0.1.0", path = "../cdde-dcr-core" }
-cdde-dcr-runtime = { version = "0.1.0", path = "../cdde-dcr-runtime" }
+bytes = "1.11.0"
+regex.workspace = true
+arc-swap = "1.7.1"
+tokio-stream.workspace = true
 cdde-shared = { version = "0.1.0", path = "../cdde-shared" }
 
 [build-dependencies]

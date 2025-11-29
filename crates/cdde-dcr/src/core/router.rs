@@ -1,5 +1,5 @@
 use cdde_shared::{DiameterMessage, AVP_DEST_REALM};
-use super::manipulation::ManipulationEngine;
+use crate::core::manipulation::ManipulationEngine;
 
 // ルーティング結果
 #[derive(Debug, PartialEq)]

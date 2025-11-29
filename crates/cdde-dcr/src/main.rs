@@ -1,8 +1,10 @@
-use cdde_dcr_core::router::{RouterCore, RouteEntry};
-use cdde_dcr_core::manipulation::ManipulationEngine;
-use cdde_dcr_runtime::service::DcrService;
+use cdde_dcr::core::router::{RouterCore, RouteEntry};
+use cdde_dcr::core::manipulation::ManipulationEngine;
+use cdde_dcr::runtime::service::DcrService;
+use cdde_proto::cdde::core_router_service_server::CoreRouterServiceServer;
 use tonic::transport::Server;
 use tracing::info;
+use std::net::SocketAddr;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
