@@ -20,7 +20,7 @@ Manipulation Engine は **Sans-IO** パターンを採用し、I/O操作を一�
 **責務:** AVP操作ルールの適用（純粋関数）
 
 ```rust
-// cdde-dcr-core/src/domain/manipulation.rs
+// cdde-dcr/src/core/manipulation.rs
 use shared::{DiameterMessage, Avp};
 use bytes::Bytes;
 use regex::Regex;

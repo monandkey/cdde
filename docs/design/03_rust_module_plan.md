@@ -10,10 +10,10 @@ CDDEは **Sans-IO Core + Actor Runtime** パターンを採用し、ロジック
 
 | DDD層 | Rust Workspace対応 | 責務 | 依存方向 |
 |---|---|---|---|
-| **Domain Layer** | `{component}-core` クレート | 純粋なビジネスロジック、状態遷移、ドメインモデル | 外部依存なし（`cdde-shared`のみ） |
-| **Application Layer** | `{component}-core` 内のユースケース | ドメインロジックのオーケストレーション | Domain Layer |
-| **Infrastructure Layer** | `{component}-runtime` クレート | I/O操作、永続化、外部システム連携 | Application Layer, Domain Layer |
-| **Presentation Layer** | `{component}` バイナリクレート | エントリーポイント、DIコンテナ組み立て | すべての層 |
+| **Domain Layer** | `{component}/src/core/` モジュール | 純粋なビジネスロジック、状態遷移、ドメインモデル | 外部依存なし（`cdde-shared`のみ） |
+| **Application Layer** | `{component}/src/app/` モジュール | ドメインロジックのオーケストレーション | Domain Layer |
+| **Infrastructure Layer** | `{component}/src/runtime/` モジュール | I/O操作、永続化、外部システム連携 | Application Layer, Domain Layer |
+| **Presentation Layer** | `{component}/src/main.rs` | エントリーポイント、DIコンテナ組み立て | すべての層 |
 
 ---
 
@@ -29,39 +29,46 @@ CDDEは **Sans-IO Core + Actor Runtime** パターンを採用し、ロジック
 
 ---
 
-### B. DFL (Diameter Frontline) クレート群
+### B. DFL (Diameter Frontline) クレート
 
-| クレート名 | DDD層 | 責務 | 依存クレート |
+**クレート:** `cdde-dfl` (単一クレート、内部モジュールで分離)
+
+| モジュールパス | DDD層 | 責務 | 依存 |
 |---|---|---|---|
-| **`cdde-dfl-core`** | **Domain** | **SessionManagerCore**<br>セッション状態管理FSM<br>タイムアウト判定ロジック（純粋関数） | `cdde-shared` |
-| **`cdde-dfl-runtime`** | **Infrastructure** | **SessionActor**<br>SCTP I/O, `DelayQueue`タイマー<br>gRPC Client (DCR呼び出し) | `cdde-dfl-core`<br>`tokio`, `tonic`<br>`tokio-util` |
-| **`cdde-dfl`** | **Presentation** | main関数、DI組み立て | `cdde-dfl-runtime` |
+| **`src/core/`** | **Domain** | **SessionManagerCore**<br>セッション状態管理FSM<br>タイムアウト判定ロジック（純粋関数） | `cdde-shared` |
+| **`src/runtime/`** | **Infrastructure** | **SessionActor**<br>SCTP I/O, `DelayQueue`タイマー<br>gRPC Client (DCR呼び出し) | `core`, `tokio`, `tonic`, `tokio-util` |
+| **`src/app/`** | **Application** | アプリケーションロジック<br>`network`, `client`, `store` | `core`, `runtime` |
+| **`src/main.rs`** | **Presentation** | main関数、DI組み立て | `app`, `runtime`, `core` |
 
-**依存グラフ:** `cdde-dfl` → `cdde-dfl-runtime` → `cdde-dfl-core` → `cdde-shared`
+**モジュール依存:** `main` → `app` → `runtime` → `core` → `cdde-shared`
 
 ---
 
-### C. DCR (Diameter Core Router) クレート群
+### C. DCR (Diameter Core Router) クレート
 
-| クレート名 | DDD層 | 責務 | 依存クレート |
+**クレート:** `cdde-dcr` (単一クレート、内部モジュールで分離)
+
+| モジュールパス | DDD層 | 責務 | 依存 |
 |---|---|---|---|
-| **`cdde-dcr-core`** | **Domain** | **RouterCore**<br>ルーティングエンジン<br>**ManipulationEngine**<br>AVP書き換え、Topology Hiding | `cdde-shared`<br>`cdde-diameter-dict`<br>`regex` |
-| **`cdde-dcr-runtime`** | **Infrastructure** | **DcrService** (gRPC Server)<br>設定変更監視<br>`ArcSwap`による動的設定更新 | `cdde-dcr-core`<br>`tonic`, `arc-swap` |
-| **`cdde-dcr`** | **Presentation** | main関数、VR設定ロード | `cdde-dcr-runtime` |
+| **`src/core/`** | **Domain** | **RouterCore**<br>ルーティングエンジン<br>**ManipulationEngine**<br>AVP書き換え、Topology Hiding | `cdde-shared`, `cdde-diameter-dict`, `regex` |
+| **`src/runtime/`** | **Infrastructure** | **DcrService** (gRPC Server)<br>設定変更監視<br>`ArcSwap`による動的設定更新 | `core`, `tonic`, `arc-swap` |
+| **`src/main.rs`** | **Presentation** | main関数、VR設定ロード | `runtime`, `core` |
 
-**依存グラフ:** `cdde-dcr` → `cdde-dcr-runtime` → `cdde-dcr-core` → `cdde-shared`
+**モジュール依存:** `main` → `runtime` → `core` → `cdde-shared`
 
 ---
 
-### D. DPA (Diameter Peer Agent) クレート群
+### D. DPA (Diameter Peer Agent) クレート
 
-| クレート名 | DDD層 | 責務 | 依存クレート |
+**クレート:** `cdde-dpa` (単一クレート、内部モジュールで分離)
+
+| モジュールパス | DDD層 | 責務 | 依存 |
 |---|---|---|---|
-| **`cdde-dpa-core`** | **Domain** | **PeerFsm**<br>RFC 6733 ピア状態遷移マシン<br>Watchdogロジック（純粋関数） | `cdde-shared` |
-| **`cdde-dpa-runtime`** | **Infrastructure** | **PeerActor**<br>SCTP Heartbeat送信<br>DWR/DWA処理<br>DFL通知 | `cdde-dpa-core`<br>`tokio`, `sctp` |
-| **`cdde-dpa`** | **Presentation** | main関数、Peer設定ロード | `cdde-dpa-runtime` |
+| **`src/core/`** | **Domain** | **PeerFsm**<br>RFC 6733 ピア状態遷移マシン<br>Watchdogロジック（純粋関数） | `cdde-shared` |
+| **`src/runtime/`** | **Infrastructure** | **PeerActor**<br>SCTP Heartbeat送信<br>DWR/DWA処理<br>DFL通知 | `core`, `tokio`, `sctp` |
+| **`src/main.rs`** | **Presentation** | main関数、Peer設定ロード | `runtime`, `core` |
 
-**依存グラフ:** `cdde-dpa` → `cdde-dpa-runtime` → `cdde-dpa-core` → `cdde-shared`
+**モジュール依存:** `main` → `runtime` → `core` → `cdde-shared`
 
 ---
 
@@ -75,22 +82,22 @@ CDDEは **Sans-IO Core + Actor Runtime** パターンを採用し、ロジック
 
 ## 3. 依存関係の原則
 
-### 3.1. Core クレートの制約
+### 3.1. Core モジュールの制約
 
-**Core クレート (`*-core`) は以下に依存してはならない:**
+**Core モジュール (`src/core/`) は以下に依存してはならない:**
 - ❌ `tokio` (非同期ランタイム)
 - ❌ `tonic` (gRPC)
 - ❌ `sctp`, `tokio::net` (I/O)
 - ❌ `sqlx` (データベース)
 
-**Core クレートが依存して良いもの:**
+**Core モジュールが依存して良いもの:**
 - ✅ `cdde-shared` (共通型)
 - ✅ `serde`, `thiserror` (シリアライズ、エラー定義)
 - ✅ `std::collections` (HashMap等)
 
-### 3.2. Runtime クレートの責務
+### 3.2. Runtime モジュールの責務
 
-Runtime クレートは:
+Runtime モジュールは:
 - Core の状態遷移関数 (`step`, `process` 等) を呼び出す
 - Core からの **Action** (命令) を実際のI/O操作に変換する
 - 外部イベント (ソケット受信、タイマー発火) を Core の **Event** に変換する
@@ -101,17 +108,17 @@ Runtime クレートは:
 
 | メリット | 効果 |
 |---|---|
-| **テスト容易性** | Core クレートは I/O モック不要で単体テスト可能<br>コンパイル時間短縮（Core変更時にRuntimeは再ビルド不要） |
-| **依存性の明確化** | `Cargo.toml` で物理的に依存を制限<br>誤ってCoreからI/Oを呼ぶとコンパイルエラー |
+| **テスト容易性** | Core モジュールは I/O モック不要で単体テスト可能<br>モジュール境界による明確な責務分離 |
+| **依存性の明確化** | モジュール構造で論理的に依存を分離<br>明確なインターフェース定義 |
 | **ポータビリティ** | Core ロジックは WASM や他のランタイムへ移植可能 |
-| **並行開発** | Core と Runtime を別チームで並行開発可能 |
+| **並行開発** | Core と Runtime モジュールを別担当者で並行開発可能 |
 
 ---
 
 ## 5. 実装例: DFL Session Manager
 
 ```rust
-// cdde-dfl-core/src/session.rs (Domain Layer)
+// cdde-dfl/src/core/session.rs (Domain Layer)
 pub struct SessionManagerCore {
     sessions: HashMap<SessionKey, SessionState>,
 }
@@ -126,7 +133,7 @@ impl SessionManagerCore {
     }
 }
 
-// cdde-dfl-runtime/src/actor.rs (Infrastructure Layer)
+// cdde-dfl/src/runtime/session_actor.rs (Infrastructure Layer)
 pub struct SessionActor {
     core: SessionManagerCore,
     timeout_queue: DelayQueue<SessionKey>,

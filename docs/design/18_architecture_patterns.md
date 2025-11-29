@@ -150,10 +150,10 @@ pub fn step(&mut self, event: FsmEvent) -> Vec<FsmAction> {
 
 | DDD層 | Rust Workspace対応 | 責務 | 依存方向 |
 |---|---|---|---|
-| **Domain Layer** | `{component}-core` クレート | 純粋なビジネスロジック、状態遷移、ドメインモデル | 外部依存なし（`cdde-shared`のみ） |
-| **Application Layer** | `{component}-core` 内のユースケース | ドメインロジックのオーケストレーション | Domain Layer |
-| **Infrastructure Layer** | `{component}-runtime` クレート | I/O操作、永続化、外部システム連携 | Application Layer, Domain Layer |
-| **Presentation Layer** | `{component}` バイナリクレート | エントリーポイント、DIコンテナ組み立て | すべての層 |
+| **Domain Layer** | `{component}/src/core/` モジュール | 純粋なビジネスロジック、状態遷移、ドメインモデル | 外部依存なし（`cdde-shared`のみ） |
+| **Application Layer** | `{component}/src/app/` モジュール | ドメインロジックのオーケストレーション | Domain Layer |
+| **Infrastructure Layer** | `{component}/src/runtime/` モジュール | I/O操作、永続化、外部システム連携 | Application Layer, Domain Layer |
+| **Presentation Layer** | `{component}/src/main.rs` | エントリーポイント、DIコンテナ組み立て | すべての層 |
 
 ### 3.2. 依存性逆転の原則 (DIP)
 
@@ -165,7 +165,7 @@ pub fn step(&mut self, event: FsmEvent) -> Vec<FsmAction> {
 - Presentation Layer で具体的な実装を注入 (DI)
 
 ```rust
-// Application Layer (cdde-dfl-core)
+// Application Layer (cdde-dfl/src/core)
 pub trait SessionRepository {
     fn save(&self, session: &Session) -> Result<()>;
 }

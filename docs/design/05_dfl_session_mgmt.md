@@ -21,7 +21,7 @@ DFL セッション管理は **Sans-IO Core + Actor Runtime** パターンを採
 **責務:** セッション状態の管理と判断ロジック（純粋関数）
 
 ```rust
-// cdde-dfl-core/src/domain/session.rs
+// cdde-dfl/src/core/session.rs
 pub struct SessionManagerCore {
     sessions: HashMap<SessionKey, SessionState>,
     config: SessionConfig,

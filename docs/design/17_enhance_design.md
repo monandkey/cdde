@@ -236,9 +236,12 @@ cdde-dfl/
 
 **変更後:**
 ```
-cdde-dfl-core/      # Domain Layer (純粋関数)
-cdde-dfl-runtime/   # Infrastructure Layer (I/O)
-cdde-dfl/           # Presentation Layer (main)
+cdde-dfl/
+  ├── src/
+  │   ├── core/       # Domain Layer (純粋関数)
+  │   ├── runtime/    # Infrastructure Layer (I/O)
+  │   ├── app/        # Application Layer
+  │   └── main.rs     # Presentation Layer
 ```
 
 ### 7.2. 依存関係の制約

@@ -112,7 +112,7 @@ cargo tarpaulin --out Html --output-dir ./coverage
 #### 2.4.1. SessionManagerCore のテスト例
 
 ```rust
-// cdde-dfl-core/tests/session_manager_test.rs
+// cdde-dfl/tests/session_manager_test.rs
 
 #[test]
 fn test_session_timeout_logic() {
@@ -158,7 +158,7 @@ fn test_answer_received_before_timeout() {
 #### 2.4.2. PeerFsm のテスト例
 
 ```rust
-// cdde-dpa-core/tests/peer_fsm_test.rs
+// cdde-dpa/tests/peer_fsm_test.rs
 
 #[test]
 fn test_peer_fsm_watchdog_timeout() {
@@ -212,7 +212,7 @@ fn test_peer_fsm_dwa_resets_failure_count() {
 #### 2.4.3. RouterCore のテスト例
 
 ```rust
-// cdde-dcr-core/tests/router_core_test.rs
+// cdde-dcr/tests/router_core_test.rs
 
 #[test]
 fn test_routing_decision() {
@@ -251,7 +251,7 @@ fn test_manipulation_applied_before_routing() {
 #### 2.4.4. Property-Based Testing (状態機械の堅牢性検証)
 
 ```rust
-// cdde-dpa-core/tests/peer_fsm_property_test.rs
+// cdde-dpa/tests/peer_fsm_property_test.rs
 
 use proptest::prelude::*;
 

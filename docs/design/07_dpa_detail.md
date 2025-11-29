@@ -35,7 +35,7 @@ DPA は **Sans-IO Core + Actor Runtime** パターンを採用し、RFC 6733 準
 #### 2.1.1. 状態定義 (PeerState)
 
 ```rust
-// cdde-dpa-core/src/fsm.rs
+// cdde-dpa/src/core/fsm.rs
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum PeerState {
     Closed,       // 初期状態、切断済み

@@ -95,7 +95,7 @@ DCR は **Sans-IO** パターンを採用し、ルーティングロジックと
 **責務:** ルーティング判断とManipulation適用（純粋関数）
 
 ```rust
-// cdde-dcr-core/src/domain/router.rs
+// cdde-dcr/src/core/router.rs
 use shared::{DiameterMessage, AVP_DEST_REALM};
 use super::manipulation::ManipulationEngine;
 
