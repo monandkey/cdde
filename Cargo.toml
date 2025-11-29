@@ -16,7 +16,8 @@ members = [
     # Additional crates
     "crates/cdde-config",
     "crates/cdde-metrics",
-    "crates/cdde-logging", "crates/cdde-shared", "crates/cdde-dfl-core", "crates/cdde-dfl-runtime", "crates/cdde-dpa-core", "crates/cdde-dpa-runtime", "crates/cdde-dcr-core", "crates/cdde-dcr-runtime",
+    "crates/cdde-logging",
+    "crates/cdde-shared",
 ]
 
 [workspace.package]
