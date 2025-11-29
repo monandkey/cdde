@@ -105,6 +105,198 @@ cargo tarpaulin --out Html --output-dir ./coverage
 # 目標カバレッジ: 80%以上
 ```
 
+### 2.4. Sans-IO Core Components のテスト
+
+**特徴:** I/O モック不要、決定論的
+
+#### 2.4.1. SessionManagerCore のテスト例
+
+```rust
+// cdde-dfl-core/tests/session_manager_test.rs
+
+#[test]
+fn test_session_timeout_logic() {
+    let mut core = SessionManagerCore::new(SessionConfig {
+        timeout_duration: Duration::from_secs(5),
+    });
+
+    // 1. Request受信
+    let msg = create_test_diameter_message(hop_id: 12345);
+    let actions = core.on_request_received(1, msg, Instant::now());
+    assert_eq!(actions, vec![SessionAction::ForwardToDcr(_)]);
+
+    // 2. タイムアウト発火
+    let key = SessionKey { connection_id: 1, hop_by_hop_id: 12345 };
+    let actions = core.on_timeout(key);
+    assert_eq!(actions, vec![SessionAction::ReplyWith3002(key)]);
+
+    // 3. 同じキーで再度タイムアウト発火（既に削除済み）
+    let actions = core.on_timeout(key);
+    assert_eq!(actions, vec![]);  // 何もしない
+}
+
+#[test]
+fn test_answer_received_before_timeout() {
+    let mut core = SessionManagerCore::new(config);
+
+    // Request受信
+    let req = create_test_diameter_message(hop_id: 12345);
+    core.on_request_received(1, req, Instant::now());
+
+    // Answer受信（タイムアウト前）
+    let ans = create_test_diameter_message(hop_id: 12345);
+    let actions = core.on_answer_received(1, ans);
+    assert!(actions.contains(&SessionAction::RemoveSession(_)));
+
+    // タイムアウト発火（既に削除済み）
+    let key = SessionKey { connection_id: 1, hop_by_hop_id: 12345 };
+    let actions = core.on_timeout(key);
+    assert_eq!(actions, vec![]);  // 何もしない
+}
+```
+
+#### 2.4.2. PeerFsm のテスト例
+
+```rust
+// cdde-dpa-core/tests/peer_fsm_test.rs
+
+#[test]
+fn test_peer_fsm_watchdog_timeout() {
+    let config = PeerConfig {
+        watchdog_interval: Duration::from_secs(30),
+        max_watchdog_failures: 3,
+    };
+    let mut fsm = PeerFsm::new(config);
+
+    // 1. 起動 -> 接続 -> Open状態にする
+    fsm.step(FsmEvent::Start);
+    fsm.step(FsmEvent::ConnectionUp);
+    fsm.step(FsmEvent::MessageReceived(create_cea_message()));
+    assert_eq!(fsm.current_state(), PeerState::Open);
+
+    // 2. Watchdogタイムアウトを3回発生させる
+    for i in 0..3 {
+        let actions = fsm.step(FsmEvent::WatchdogTimerExpiry);
+        assert!(actions.contains(&FsmAction::SendBytes(_)));  // DWR送信
+        assert!(actions.contains(&FsmAction::ResetWatchdogTimer));
+    }
+
+    // 3. 4回目でDOWN判定
+    let actions = fsm.step(FsmEvent::WatchdogTimerExpiry);
+    assert!(actions.contains(&FsmAction::NotifyDflDown));
+    assert!(actions.contains(&FsmAction::DisconnectPeer));
+    assert_eq!(fsm.current_state(), PeerState::Closed);
+}
+
+#[test]
+fn test_peer_fsm_dwa_resets_failure_count() {
+    let mut fsm = PeerFsm::new(config);
+    // Open状態にする
+    setup_open_state(&mut fsm);
+
+    // Watchdogタイムアウト2回
+    fsm.step(FsmEvent::WatchdogTimerExpiry);
+    fsm.step(FsmEvent::WatchdogTimerExpiry);
+
+    // DWA受信 -> 失敗カウントリセット
+    fsm.step(FsmEvent::MessageReceived(create_dwa_message()));
+
+    // さらに3回タイムアウトしてもまだDOWNしない
+    for _ in 0..3 {
+        let actions = fsm.step(FsmEvent::WatchdogTimerExpiry);
+        assert!(!actions.contains(&FsmAction::NotifyDflDown));
+    }
+}
+```
+
+#### 2.4.3. RouterCore のテスト例
+
+```rust
+// cdde-dcr-core/tests/router_core_test.rs
+
+#[test]
+fn test_routing_decision() {
+    let routes = vec![
+        RouteEntry { dest_realm: "operator.net".to_string(), target_peer: "hss01".to_string() },
+    ];
+    let manipulator = ManipulationEngine::new(vec![]);
+    let core = RouterCore::new(routes, manipulator);
+
+    // ルーティング判断
+    let msg = create_test_diameter_message(dest_realm: "operator.net");
+    let (processed_msg, action) = core.process(msg);
+
+    assert_eq!(action, RouteAction::Forward("hss01".to_string()));
+}
+
+#[test]
+fn test_manipulation_applied_before_routing() {
+    let rules = vec![
+        ManipulationRule::ReplaceAvp {
+            code: AVP_ORIGIN_HOST,
+            new_value: Bytes::from("dra.public.net"),
+        },
+    ];
+    let manipulator = ManipulationEngine::new(rules);
+    let core = RouterCore::new(vec![], manipulator);
+
+    let msg = create_test_diameter_message(origin_host: "hss01.internal.net");
+    let (processed_msg, _) = core.process(msg);
+
+    let origin_host = processed_msg.get_avp(AVP_ORIGIN_HOST).unwrap().as_string();
+    assert_eq!(origin_host, "dra.public.net");
+}
+```
+
+#### 2.4.4. Property-Based Testing (状態機械の堅牢性検証)
+
+```rust
+// cdde-dpa-core/tests/peer_fsm_property_test.rs
+
+use proptest::prelude::*;
+
+prop_compose! {
+    fn arb_fsm_event()(event_type in 0..6u8) -> FsmEvent {
+        match event_type {
+            0 => FsmEvent::Start,
+            1 => FsmEvent::ConnectionUp,
+            2 => FsmEvent::ConnectionFailed,
+            3 => FsmEvent::MessageReceived(create_random_diameter_message()),
+            4 => FsmEvent::WatchdogTimerExpiry,
+            5 => FsmEvent::DisconnectRequest,
+            _ => unreachable!(),
+        }
+    }
+}
+
+proptest! {
+    #[test]
+    fn test_fsm_never_panics(events in prop::collection::vec(arb_fsm_event(), 0..100)) {
+        let mut fsm = PeerFsm::new(config);
+        for event in events {
+            let _ = fsm.step(event);  // パニックしないことを検証
+        }
+    }
+
+    #[test]
+    fn test_fsm_state_consistency(events in prop::collection::vec(arb_fsm_event(), 0..50)) {
+        let mut fsm = PeerFsm::new(config);
+        for event in events {
+            let actions = fsm.step(event);
+            // 不変条件: Open状態の時のみNotifyDflUpを発行
+            if actions.contains(&FsmAction::NotifyDflUp) {
+                assert_eq!(fsm.current_state(), PeerState::Open);
+            }
+        }
+    }
+}
+```
+
+**メリット:**
+- **I/O モック不要:** ソケットやタイマーのモックが不要で、テストが高速
+- **決定論的:** 同じ入力に対して常に同じ結果を返すため、再現性が高い
+- **網羅的:** Property-Based Testing でランダムなイベント列を生成し、エッジケースを発見
+
 ---
 
 ## 3. 統合テスト (Integration Tests)

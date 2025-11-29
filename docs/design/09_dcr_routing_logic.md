@@ -86,6 +86,95 @@ pub enum PeerStatus {
 }
 ```
 
+### 2.2. アーキテクチャ: Stateless Core Design (Sans-IO)
+
+DCR は **Sans-IO** パターンを採用し、ルーティングロジックとI/O操作を分離します。
+
+#### 2.2.1. Core Layer: RouterCore
+
+**責務:** ルーティング判断とManipulation適用（純粋関数）
+
+```rust
+// cdde-dcr-core/src/domain/router.rs
+use shared::{DiameterMessage, AVP_DEST_REALM};
+use super::manipulation::ManipulationEngine;
+
+#[derive(Debug, PartialEq)]
+pub enum RouteAction {
+    Forward(String),     // 転送先Peer名
+    Discard,             // 破棄
+    ReplyError(u32),     // エラーコード返却 (3002, 3003等)
+}
+
+// ★ Sans-IO Core Logic
+pub struct RouterCore {
+    routes: Vec<RouteEntry>,
+    manipulator: ManipulationEngine,
+}
+
+impl RouterCore {
+    // ★ 純粋関数: 入力メッセージ -> (加工後メッセージ, アクション)
+    pub fn process(&self, msg: DiameterMessage) -> (DiameterMessage, RouteAction) {
+        // 1. Manipulation & Topology Hiding 実行
+        let processed_msg = self.manipulator.apply(msg);
+
+        // 2. ルーティング決定
+        let dest_realm = processed_msg.get_avp(AVP_DEST_REALM)
+            .map(|a| a.as_string())
+            .unwrap_or_default();
+
+        let action = if let Some(route) = self.routes.iter().find(|r| r.dest_realm == dest_realm) {
+            RouteAction::Forward(route.target_peer.clone())
+        } else {
+            RouteAction::ReplyError(3003)  // DIAMETER_REALM_NOT_SERVED
+        };
+
+        (processed_msg, action)
+    }
+}
+```
+
+#### 2.2.2. Runtime Layer: DcrService with ArcSwap
+
+**責務:** gRPC通信と動的設定更新（無停止）
+
+```rust
+// cdde-dcr-runtime/src/server.rs
+use arc_swap::ArcSwap;  // ★ ロックフリー設定更新
+use std::sync::Arc;
+
+pub struct DcrService {
+    // ★ ArcSwapによる動的設定更新
+    core: Arc<ArcSwap<RouterCore>>,
+}
+
+impl DcrService {
+    pub fn new(initial_core: RouterCore) -> Self {
+        Self {
+            core: Arc::new(ArcSwap::from_pointee(initial_core)),
+        }
+    }
+
+    // 設定変更時に呼ばれる (CMからの通知)
+    pub fn update_config(&self, new_core: RouterCore) {
+        self.core.store(Arc::new(new_core));
+        // トラフィック処理を止めずに設定更新完了
+    }
+
+    async fn process_packet(&self, msg: DiameterMessage) -> RouteAction {
+        // ★ ロックフリーで現在の設定を取得
+        let core = self.core.load();
+        let (processed_msg, action) = core.process(msg);
+        action
+    }
+}
+```
+
+**メリット:**
+- **無停止設定更新:** `ArcSwap` により、トラフィック処理中でも設定変更可能
+- **ロックフリー:** Read Lock が発生しないため、高スループットを維持
+- **テスト容易性:** `RouterCore` は I/O モック不要で単体テスト可能
+
 ---
 
 ## 3. ルーティング処理フロー

@@ -64,6 +64,44 @@
 - **データストア:** PostgreSQL (CMS用), In-memory (Core用)
     
 
+### 2.4. アーキテクチャパターン: Sans-IO Core + Actor Runtime
+
+CDDE の Core Application (DFL, DCR, DPA) は、**Sans-IO (I/O-free) Core + Actor Runtime** パターンを採用する。
+
+このパターンは、ビジネスロジック（判断・状態遷移）と副作用（I/O操作）を明確に分離することで、高い信頼性とテスト容易性を実現する。
+
+#### 2.4.1. 設計原則
+
+| レイヤー | 責務 | 技術的特徴 | DDD対応 |
+|---|---|---|---|
+| **Core (Logic)** | **判断・状態遷移**<br>ルーティング決定、AVP操作、プロトコル状態管理 | **純粋関数**<br>I/O（ソケット、タイマー）や `async/await` に依存しない<br>`Result` 型でエラーを表現 | ドメイン層 |
+| **Runtime (Shell)** | **I/O実行**<br>ソケット読み書き、タイマー発火、gRPC通信 | **Tokio Actor**<br>Coreからの命令（Action）を受け取り実行<br>イベントをCoreに通知 | インフラストラクチャ層 |
+
+#### 2.4.2. コンポーネントへの適用
+
+各 Core Application は、以下のように Core と Runtime に分離される:
+
+**DFL (Diameter Frontline):**
+- **Core:** `SessionManagerCore` - セッション状態管理、タイムアウト判定ロジック
+- **Runtime:** `SessionActor` - SCTP I/O, `DelayQueue` タイマー管理, gRPC Client
+
+**DCR (Diameter Core Router):**
+- **Core:** `RouterCore` - ルーティング判断、`ManipulationEngine` (AVP書き換え)
+- **Runtime:** `DcrService` - gRPC Server, 設定変更監視
+
+**DPA (Diameter Peer Agent):**
+- **Core:** `PeerFsm` - RFC 6733 準拠のピア状態遷移マシン
+- **Runtime:** `PeerActor` - SCTP Heartbeat送信、DWR/DWA処理
+
+#### 2.4.3. メリット
+
+1. **テスト容易性**: Core ロジックは I/O モック不要で単体テスト可能
+2. **決定論的動作**: Core は I/O タイミングに依存せず、デバッグが容易
+3. **高信頼性**: 型システムによる不正状態の排除（コンパイル時エラー）
+4. **並行性**: Actor モデルにより、ロック競合を回避し高スループットを実現
+
+詳細は [18_architecture_patterns.md](file:///workspace/docs/design/18_architecture_patterns.md) を参照。
+
 ---
 
 ## 3. ネットワーク設計 (Network Design)

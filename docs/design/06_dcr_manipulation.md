@@ -11,7 +11,102 @@
 
 DCRは、ルーティング処理中に、設定されたルールを優先度順に実行します。
 
------
+### 1.3. アーキテクチャ: Pure Function Design
+
+Manipulation Engine は **Sans-IO** パターンを採用し、I/O操作を一切含まない純粋関数として実装されます。
+
+#### 1.3.1. ManipulationEngine (Core)
+
+**責務:** AVP操作ルールの適用（純粋関数）
+
+```rust
+// cdde-dcr-core/src/domain/manipulation.rs
+use shared::{DiameterMessage, Avp};
+use bytes::Bytes;
+use regex::Regex;
+
+#[derive(Debug)]
+pub enum ManipulationRule {
+    ReplaceAvp { code: u32, new_value: Bytes },
+    RegexReplace { code: u32, pattern: Regex, replacement: String },
+    RemoveAvp { code: u32 },
+    TopologyHide { host_replacement: String, realm_replacement: String },
+}
+
+pub struct ManipulationEngine {
+    rules: Vec<ManipulationRule>,
+}
+
+impl ManipulationEngine {
+    pub fn new(rules: Vec<ManipulationRule>) -> Self {
+        Self { rules }
+    }
+
+    // ★ 純粋関数: メッセージを受け取り、加工して返す
+    pub fn apply(&self, mut msg: DiameterMessage) -> DiameterMessage {
+        for rule in &self.rules {
+            match rule {
+                ManipulationRule::ReplaceAvp { code, new_value } => {
+                    let new_avp = Avp {
+                        code: *code,
+                        flags: 0x40,
+                        length: (new_value.len() + 8) as u32,
+                        vendor_id: None,
+                        data: new_value.clone(),
+                    };
+                    msg.set_avp(new_avp);
+                }
+                ManipulationRule::RegexReplace { code, pattern, replacement } => {
+                    if let Some(avp) = msg.get_avp(*code) {
+                        let original_str = avp.as_string();
+                        let new_str = pattern.replace(&original_str, replacement.as_str());
+                        let new_bytes = Bytes::from(new_str.into_owned());
+                        let new_avp = Avp {
+                            code: *code,
+                            flags: avp.flags,
+                            length: (new_bytes.len() + 8) as u32,
+                            vendor_id: avp.vendor_id,
+                            data: new_bytes,
+                        };
+                        msg.set_avp(new_avp);
+                    }
+                }
+                ManipulationRule::RemoveAvp { code } => {
+                    msg.avps.retain(|a| a.code != *code);
+                }
+                ManipulationRule::TopologyHide { host_replacement, realm_replacement } => {
+                    // Origin-Host, Origin-Realm の置換
+                    // Route-Record の削除
+                    // 実装省略
+                }
+            }
+        }
+        msg
+    }
+}
+```
+
+**メリット:**
+- **テスト容易性:** I/O モック不要で、入力メッセージと期待出力を比較するだけ
+- **決定論的:** 同じ入力に対して常に同じ出力を返す
+- **並行安全:** 不変データ構造により、複数スレッドから安全に呼び出し可能
+
+#### 1.3.2. Topology Hiding 実装
+
+正規表現を使った柔軟なトポロジー隠蔽:
+
+```rust
+// 例: Origin-Host の内部ホスト名を隠蔽
+let rule = ManipulationRule::RegexReplace {
+    code: AVP_ORIGIN_HOST,  // 264
+    pattern: Regex::new(r"^hss\d+\.internal\.net$").unwrap(),
+    replacement: "dra.public.net".to_string(),
+};
+
+// 適用前: Origin-Host = "hss01.internal.net"
+// 適用後: Origin-Host = "dra.public.net"
+```
+
 
 ## 2\. JSON スキーマ定義 (The Core Schema)
 

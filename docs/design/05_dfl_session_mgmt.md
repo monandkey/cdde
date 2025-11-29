@@ -12,7 +12,135 @@ DFLセッション管理は、外部DBへのアクセスを避け、プロセス
   * **キー構造:** `(u64, u32)` $\rightarrow$ **`(Connection ID, Hop-by-Hop ID)`**
       * これにより、システム全体でトランザクションを一意に識別します。
 
------
+### 1.5. アーキテクチャ: Core/Runtime 分離
+
+DFL セッション管理は **Sans-IO Core + Actor Runtime** パターンを採用し、ロジックとI/Oを分離します。
+
+#### 1.5.1. Core Layer: SessionManagerCore
+
+**責務:** セッション状態の管理と判断ロジック（純粋関数）
+
+```rust
+// cdde-dfl-core/src/domain/session.rs
+pub struct SessionManagerCore {
+    sessions: HashMap<SessionKey, SessionState>,
+    config: SessionConfig,
+}
+
+impl SessionManagerCore {
+    // イベント1: Request受信
+    pub fn on_request_received(
+        &mut self, 
+        conn_id: u64, 
+        msg: DiameterMessage,
+        now: Instant
+    ) -> Vec<SessionAction> {
+        let key = SessionKey { connection_id: conn_id, hop_by_hop_id: msg.hop_by_hop_id };
+        self.sessions.insert(key, SessionState { created_at: now, original_msg: msg.clone() });
+        vec![SessionAction::ForwardToDcr(msg)]
+    }
+
+    // イベント2: Answer受信
+    pub fn on_answer_received(
+        &mut self, 
+        conn_id: u64, 
+        msg: DiameterMessage
+    ) -> Vec<SessionAction> {
+        let key = SessionKey { connection_id: conn_id, hop_by_hop_id: msg.hop_by_hop_id };
+        if self.sessions.remove(&key).is_some() {
+            vec![SessionAction::RemoveSession(key)]
+        } else {
+            vec![SessionAction::Discard]  // タイムアウト済み
+        }
+    }
+
+    // イベント3: タイムアウト発火
+    pub fn on_timeout(&mut self, key: SessionKey) -> Vec<SessionAction> {
+        if self.sessions.remove(&key).is_some() {
+            vec![SessionAction::ReplyWith3002(key)]
+        } else {
+            vec![]  // 既に処理済み
+        }
+    }
+}
+```
+
+**Event/Action パターン:**
+
+| Event (入力) | Action (出力命令) |
+|---|---|
+| `on_request_received` | `ForwardToDcr(msg)` - DCRへ転送せよ |
+| `on_answer_received` | `RemoveSession(key)` - セッション削除<br>`Discard` - パケット破棄 |
+| `on_timeout` | `ReplyWith3002(key)` - エラー応答送信 |
+
+#### 1.5.2. Runtime Layer: SessionActor
+
+**責務:** I/O操作とタイマー管理（Tokio Actor）
+
+```rust
+// cdde-dfl-runtime/src/actor/session_actor.rs
+pub struct SessionActor {
+    core: SessionManagerCore,
+    receiver: mpsc::Receiver<ActorMessage>,
+    timeout_queue: DelayQueue<SessionKey>,
+    outbound_tx: mpsc::Sender<SessionAction>,
+}
+
+impl SessionActor {
+    pub async fn run(mut self) {
+        loop {
+            tokio::select! {
+                // 外部からのメッセージ受信
+                Some(msg) = self.receiver.recv() => {
+                    self.handle_message(msg).await;
+                }
+                // タイムアウト発火
+                Some(expired) = self.timeout_queue.next() => {
+                    let key = expired.into_inner();
+                    let actions = self.core.on_timeout(key);
+                    self.execute_actions(actions).await;
+                }
+            }
+        }
+    }
+
+    async fn handle_message(&mut self, msg: ActorMessage) {
+        let actions = match msg {
+            ActorMessage::IngressRequest { conn_id, msg } => {
+                let key = SessionKey { connection_id: conn_id, hop_by_hop_id: msg.hop_by_hop_id };
+                // タイマーセット
+                self.timeout_queue.insert(key, self.core.config.timeout_duration);
+                // Coreロジック実行
+                self.core.on_request_received(conn_id, msg, Instant::now())
+            },
+            ActorMessage::IngressAnswer { conn_id, msg } => {
+                self.core.on_answer_received(conn_id, msg)
+            }
+        };
+        self.execute_actions(actions).await;
+    }
+
+    async fn execute_actions(&self, actions: Vec<SessionAction>) {
+        for action in actions {
+            match action {
+                SessionAction::ForwardToDcr(msg) => {
+                    // gRPC Client呼び出し
+                },
+                SessionAction::ReplyWith3002(key) => {
+                    // SCTP Socket書き込み
+                },
+                _ => {}
+            }
+        }
+    }
+}
+```
+
+**メリット:**
+- **テスト容易性:** `SessionManagerCore` は I/O モック不要で単体テスト可能
+- **決定論的:** タイムアウトロジックを時間に依存せずテスト可能
+- **スレッド安全:** Actor内で逐次処理されるため、Mutex不要
+
 
 ## 2. データ構造の定義 (Rust Structs)
 
