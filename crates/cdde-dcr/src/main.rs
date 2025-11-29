@@ -1,10 +1,11 @@
 use cdde_dcr_core::router::{RouterCore, RouteEntry};
 use cdde_dcr_core::manipulation::ManipulationEngine;
 use cdde_dcr_runtime::service::DcrService;
+use tonic::transport::Server;
 use tracing::info;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     cdde_logging::init();
 
@@ -26,16 +27,18 @@ async fn main() {
 
     // Service起動
     let service = DcrService::new(core);
+    let grpc_server = service.into_grpc_server();
     
-    info!("DCR Service initialized. Listening on 0.0.0.0:50051 (Mock)");
+    let addr = std::env::var("DCR_BIND_ADDR")
+        .unwrap_or_else(|_| "[::1]:50051".to_string())
+        .parse()?;
+
+    info!("DCR gRPC Service listening on {}", addr);
     
-    // gRPCサーバー起動 (モック)
-    // tonic::transport::Server::builder()
-    //    .add_service(DcrServer::new(service))
-    //    .serve(addr)
-    //    .await?;
-    
-    // 簡易的に待機
-    tokio::signal::ctrl_c().await.unwrap();
-    info!("Shutting down DCR service");
+    Server::builder()
+        .add_service(grpc_server)
+        .serve(addr)
+        .await?;
+
+    Ok(())
 }
