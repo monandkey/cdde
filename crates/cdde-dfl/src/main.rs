@@ -51,7 +51,21 @@ async fn main() {
     
     info!("Session Actor started");
 
+    // Spawn a task to handle outbound actions from SessionActor
+    // TODO: この実装では outbound_rx からアクションを受け取り、実際の処理を行う
+    // - ForwardToDcr: DCR Client でメッセージ送信
+    // - ReplyWith3002Error: TCP Socket で 3002 エラー応答を送信
+    // - RemoveSession: セッションストアからエントリ削除
+    tokio::spawn(async move {
+        while let Some(_action) = outbound_rx.recv().await {
+            // TODO: Handle SessionAction here
+            // match action { ... }
+        }
+    });
+
     // Start TCP Server
+    // TODO: TcpServer に actor_tx を渡して、受信したパケットを SessionActor に送信できるようにする
+    // 現在は actor_tx が未使用だが、本来は TcpServer::new(bind_addr, store, actor_tx) のように渡すべき
     let bind_addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3868".to_string());
     let server = TcpServer::new(bind_addr.clone(), store);
 

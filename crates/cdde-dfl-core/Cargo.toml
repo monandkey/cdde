@@ -7,4 +7,5 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+bytes = "1.11.0"
 cdde-shared = { version = "0.1.0", path = "../cdde-shared" }

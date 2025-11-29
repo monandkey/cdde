@@ -11,6 +11,12 @@ pub const AVP_ORIGIN_REALM: u32 = 296;
 pub const AVP_DEST_REALM: u32 = 283;
 pub const AVP_ROUTE_RECORD: u32 = 282;
 
+// Result-Code values (AVP 268)
+pub const RESULT_CODE_SUCCESS: u32 = 2001; // DIAMETER_SUCCESS
+pub const RESULT_CODE_UNABLE_TO_DELIVER: u32 = 3002; // DIAMETER_UNABLE_TO_DELIVER
+pub const AVP_RESULT_CODE: u32 = 268;
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Avp {
     pub code: u32,
