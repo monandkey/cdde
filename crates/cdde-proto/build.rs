@@ -1,4 +1,8 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tonic_build::compile_protos("proto/cdde.proto")?;
+    tonic_build::configure()
+        .compile(
+            &["proto/cdde.proto", "proto/internal.proto"],
+            &["proto"],
+        )?;
     Ok(())
 }
