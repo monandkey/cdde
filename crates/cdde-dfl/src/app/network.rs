@@ -1,10 +1,12 @@
 // Force re-link
-use crate::store::TransactionStore;
 use cdde_core::{DiameterPacket, Result, Transport};
-use std::sync::Arc;
 use tokio::io::AsyncReadExt;
 use tokio::net::TcpListener;
-use tracing::{debug, error, info, warn};
+use std::sync::Arc;
+use tracing::{info, error, debug, warn};
+use crate::app::store::TransactionStore;
+// use crate::runtime::session_actor::ActorMessage; // Unused for now
+// use cdde_shared::DiameterMessage; // Unused for now
 
 /// TCP Server for Diameter connections
 pub struct TcpServer {
@@ -52,10 +54,10 @@ impl TcpServer {
         // Connect to DCR
         // In real impl, this address should be configurable
         let mut dcr_client: Option<
-            cdde_proto::core_router_service_client::CoreRouterServiceClient<
+            cdde_proto::cdde::core_router_service_client::CoreRouterServiceClient<
                 tonic::transport::Channel,
             >,
-        > = match cdde_proto::core_router_service_client::CoreRouterServiceClient::connect(
+        > = match cdde_proto::cdde::core_router_service_client::CoreRouterServiceClient::connect(
             "http://[::1]:50051",
         )
         .await
@@ -85,7 +87,7 @@ impl TcpServer {
                     debug!("Parsed packet: Command Code {}", packet.header.command_code);
 
                     if let Some(client) = &mut dcr_client {
-                        let request = tonic::Request::new(cdde_proto::DiameterPacketRequest {
+                        let request = tonic::Request::new(cdde_proto::cdde::DiameterPacketRequest {
                             connection_id: 0,             // Placeholder
                             vr_id: "default".to_string(), // Placeholder
                             reception_timestamp: std::time::SystemTime::now()
@@ -100,13 +102,13 @@ impl TcpServer {
                             Ok(response) => {
                                 let action = response.into_inner();
                                 let action_type =
-                                    cdde_proto::ActionType::try_from(action.action_type)
-                                        .unwrap_or(cdde_proto::ActionType::Discard);
+                                    cdde_proto::cdde::ActionType::try_from(action.action_type)
+                                        .unwrap_or(cdde_proto::cdde::ActionType::Discard);
 
                                 info!("Received action from DCR: {:?}", action_type);
 
                                 match action_type {
-                                    cdde_proto::ActionType::Reply => {
+                                    cdde_proto::cdde::ActionType::Reply => {
                                         if !action.response_payload.is_empty() {
                                             debug!(
                                                 "Sending Reply to client, {} bytes",
@@ -120,7 +122,7 @@ impl TcpServer {
                                             }
                                         }
                                     }
-                                    cdde_proto::ActionType::Forward => {
+                                    cdde_proto::cdde::ActionType::Forward => {
                                         if !action.target_host_name.is_empty() {
                                             info!(
                                                 "Forwarding packet to target: {}",
@@ -131,7 +133,7 @@ impl TcpServer {
                                             warn!("Forward action received but no target host specified");
                                         }
                                     }
-                                    cdde_proto::ActionType::Discard => {
+                                    cdde_proto::cdde::ActionType::Discard => {
                                         info!("Discarding packet as requested by DCR");
                                     }
                                 }

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod integration_tests {
-    use crate::network::TcpServer;
-    use crate::store::TransactionStore;
+    use cdde_dfl::app::network::TcpServer;
+    use cdde_dfl::app::store::TransactionStore;
     use cdde_core::{DiameterHeader, DiameterPacket};
     use std::sync::Arc;
     use std::time::Duration;

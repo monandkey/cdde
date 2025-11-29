@@ -1,4 +1,4 @@
-use cdde_proto::{ActionType, DiameterPacketAction, DiameterPacketRequest};
+use cdde_proto::cdde::{ActionType, DiameterPacketAction, DiameterPacketRequest};
 use std::time::Duration;
 
 #[tokio::test]
@@ -8,7 +8,7 @@ async fn test_e2e_flow() {
     let (tx, mut rx) = tokio::sync::mpsc::channel(1);
 
     let dcr_server = async move {
-        use cdde_proto::core_router_service_server::{CoreRouterService, CoreRouterServiceServer};
+        use cdde_proto::cdde::core_router_service_server::{CoreRouterService, CoreRouterServiceServer};
         use tonic::{Request, Response, Status};
 
         struct MockDcr {
@@ -47,7 +47,7 @@ async fn test_e2e_flow() {
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // 2. Verify DCR connection
-    let mut client = cdde_proto::core_router_service_client::CoreRouterServiceClient::connect(
+    let mut client = cdde_proto::cdde::core_router_service_client::CoreRouterServiceClient::connect(
         format!("http://{dcr_addr}"),
     )
     .await

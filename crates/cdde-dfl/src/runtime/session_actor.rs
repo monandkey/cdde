@@ -1,12 +1,13 @@
+use crate::core::session::SessionManagerCore;
+use crate::core::types::{SessionAction, SessionKey, SessionConfig};
 use cdde_shared::DiameterMessage;
-use cdde_dfl_core::types::*;
-use cdde_dfl_core::session::SessionManagerCore;
 use tokio::sync::mpsc;
 use tokio_util::time::DelayQueue;
-use futures::stream::StreamExt;
+use futures::StreamExt;
 use std::time::Instant;
 
-// Actorへの入力メッセージ
+// Actorへのメッセージ定義
+#[derive(Debug)]
 pub enum ActorMessage {
     IngressRequest { conn_id: u64, msg: DiameterMessage },
     IngressAnswer { conn_id: u64, msg: DiameterMessage },

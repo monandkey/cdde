@@ -1,18 +1,14 @@
-mod client;
-mod integration_test;
-mod network;
-mod session;
-mod store;
+// Modules are defined in lib.rs
 
-pub use client::DcrClient;
-pub use network::TcpServer;
-pub use session::TransactionContext;
-pub use store::TransactionStore;
+use cdde_dfl::app::client::DcrClient;
+use cdde_dfl::app::network::TcpServer;
+use cdde_dfl::app::session::TransactionContext;
+use cdde_dfl::app::store::TransactionStore;
 
 use std::sync::Arc;
 use tracing::info;
-use cdde_dfl_core::types::SessionConfig;
-use cdde_dfl_runtime::session_actor::SessionActor;
+use cdde_dfl::core::types::SessionConfig;
+use cdde_dfl::runtime::session_actor::SessionActor;
 
 #[tokio::main]
 async fn main() {
