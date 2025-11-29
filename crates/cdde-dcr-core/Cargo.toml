@@ -1,0 +1,12 @@
+[package]
+name = "cdde-dcr-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+bytes = "1.11.0"
+cdde-shared = { version = "0.1.0", path = "../cdde-shared" }
+regex.workspace = true

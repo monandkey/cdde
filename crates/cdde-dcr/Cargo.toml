@@ -17,6 +17,9 @@ tracing.workspace = true
 serde.workspace = true
 tonic.workspace = true
 prost.workspace = true
+cdde-dcr-core = { version = "0.1.0", path = "../cdde-dcr-core" }
+cdde-dcr-runtime = { version = "0.1.0", path = "../cdde-dcr-runtime" }
+cdde-shared = { version = "0.1.0", path = "../cdde-shared" }
 
 [build-dependencies]
 tonic-build.workspace = true
